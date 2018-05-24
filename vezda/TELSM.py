@@ -294,7 +294,6 @@ def solver(medium, alpha):
                 # 'tf' is a test function
                 # 'alpha' is the regularization parameter
                 # 'phi_alpha' is the regularized solution given 'alpha'
-                print()
                 TF = TFarray[:, :, :, 0]
                 l = 0 # counter for spatial sampling points
                 for ix in trange(Nx, desc='Solving system'):
