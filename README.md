@@ -51,7 +51,7 @@ $ python setup.py install
 ```
 
 ### Uninstalling Vezda
-Should you ever wish to uninstall Vezda from your system, simply enter
+Should you ever wish to uninstall Vezda from your system, simply enter:
 ```
 $ pip uninstall vezda
 ```
@@ -70,7 +70,7 @@ The **vezda/examples/starfish-tutorial/** folder provides an introductory tutori
 Vezda is designed from the ground up to make data visualization and imaging with the linear sampling method as simple and as elegant as possible. This is achieved by minimizing the complexity of the user interface and maximizing the flexibility and customization of the software to different imaging applications.
 
 #### Intuitive Plotting:
-Easily navigate through your data volumes using the &leftarrow;, &uparrow;, &rightarrow;, &downarrow;  arrow keys along with maps to visualize both your measured scattered wave data:
+Easily navigate through your data volumes using the &leftarrow;, &uparrow;, &rightarrow;, &downarrow;  arrow keys along with maps to visualize both your recorded scattered waves:
 
 <p align="center">
   <img src="images/data.png" width="850">
