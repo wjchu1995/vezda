@@ -28,7 +28,7 @@ Installing Vezda is simple. It is contained entirely in a binary Python wheel fo
 #### Option 1: Install from Python wheel
 Python wheels provide a faster and more efficient method to install software packages than traditional installs from source files. Additionally, they provide more consistent installations across operating systems and machines.
 
-To install Vezda from the Python wheel, simply enter:
+To install Vezda from the Python wheel, simply enter from the command line:
 ```
 $ pip install vezda
 ```
@@ -36,6 +36,10 @@ By default, pip will install the Vezda software package under the **site-package
 ```
 $ vzhome
 /path/to/your/python/site-packages/vezda
+```
+You can easily change to this directory be entering:
+```
+$ cd `vzhome`
 ```
 
 #### Option 2: Install from source files
