@@ -304,11 +304,9 @@ def solver(medium, alpha):
                         Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                         l += 1
                 
-                Image = Image**2
                 Imin = np.min(Image)
                 Imax = np.max(Image)
                 Image = (Image - Imin) / (Imax - Imin + eps)
-                Image = np.sqrt(Image)
                 Histogram[:, :, 0] = Image
                 
             else:
@@ -337,19 +335,17 @@ def solver(medium, alpha):
                         lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
                         l += 1
                         
-                firstIndicator = firstIndicator**2
                 Imin1 = np.min(firstIndicator)
                 Imax1 = np.max(firstIndicator)
                 firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                Histogram[:, :, 0] = firstIndicator
                 
-                lastIndicator = lastIndicator**2
                 Imin2 = np.min(lastIndicator)
                 Imax2 = np.max(lastIndicator)
                 lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                Histogram[:, :, -1] = lastIndicator
                 
-                Histogram[:, :, 0] = np.sqrt(firstIndicator)
-                Histogram[:, :, -1] = np.sqrt(lastIndicator)
-                Image += 0.5 * (firstIndicator + lastIndicator)
+                Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                 
                 for it in trange(1, Ntau - 1, desc='Source-time integration'):
                     indicator = np.zeros(X.shape)
@@ -362,12 +358,11 @@ def solver(medium, alpha):
                             l += 1
                             sleep(0.001)
                 
-                    indicator = indicator**2
                     Imin = np.min(indicator)
                     Imax = np.max(indicator)
                     indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                    Histogram[:, :, it] = np.sqrt(indicator)
-                    Image += indicator
+                    Histogram[:, :, it] = indicator
+                    Image += indicator**2
                     
                 Image *= deltaTau / T
                 Image = np.sqrt(Image)
@@ -420,11 +415,9 @@ def solver(medium, alpha):
                                 Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                                 l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, 0] = Image
                         userResponded = True
                         break
@@ -449,19 +442,17 @@ def solver(medium, alpha):
                                 lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
                                 l += 1
                             
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, 0] = firstIndicator
                     
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, -1] = lastIndicator
                         
-                        Histogram[:, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                     
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -478,12 +469,11 @@ def solver(medium, alpha):
                                     l += 1
                                     sleep(0.001)
                                 
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -507,11 +497,9 @@ def solver(medium, alpha):
                                 Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                                 l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, 0] = Image
                         userResponded = True
                         break
@@ -536,19 +524,17 @@ def solver(medium, alpha):
                                 lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
                                 l += 1
                             
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)     # normalization
+                        Histogram[:, :, 0] = np.sqrt(firstIndicator)
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)     # normalization
-                        
-                        Histogram[:, :, 0] = np.sqrt(firstIndicator)
                         Histogram[:, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -565,12 +551,11 @@ def solver(medium, alpha):
                                     l += 1
                                     sleep(0.001)
                                     
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)   # normalization
-                            Histogram[:, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -756,11 +741,9 @@ def solver(medium, alpha):
                             Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                             l += 1
                 
-                Image = Image**2
                 Imin = np.min(Image)
                 Imax = np.max(Image)
                 Image = (Image - Imin) / (Imax - Imin + eps)
-                Image = np.sqrt(Image)
                 Histogram[:, :, :, 0] = Image
                 
             else:
@@ -790,19 +773,17 @@ def solver(medium, alpha):
                             lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                             l += 1
             
-                firstIndicator = firstIndicator**2
                 Imin1 = np.min(firstIndicator)
                 Imax1 = np.max(firstIndicator)
                 firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                Histogram[:, :, :, 0] = firstIndicator
                 
-                lastIndicator = lastIndicator**2
                 Imin2 = np.min(lastIndicator)
                 Imax2 = np.max(lastIndicator)
                 lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                Histogram[:, :, :, -1] = lastIndicator
                 
-                Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                Image += 0.5 * (firstIndicator + lastIndicator)
+                Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                 
                 for it in trange(1, Ntau - 1, desc='Source-time integration'):
                     indicator = np.zeros(X.shape)
@@ -816,12 +797,11 @@ def solver(medium, alpha):
                                 l += 1
                                 sleep(0.001)
                                 
-                    indicator = indicator**2
                     Imin = np.min(indicator)
                     Imax = np.max(indicator)
                     indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                    Histogram[:, :, it] = np.sqrt(indicator)
-                    Image += indicator
+                    Histogram[:, :, it] = indicator
+                    Image += indicator**2
                     
                 Image *= deltaTau / T
                 Image = np.sqrt(Image)
@@ -879,11 +859,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -909,19 +887,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, :, 0] = firstIndicator
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, :, -1] = lastIndicator
                         
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -939,12 +915,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -969,11 +944,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -999,19 +972,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, :, 0] = firstIndicator
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
                         Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -1029,12 +1000,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -1059,11 +1029,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -1089,19 +1057,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, :, 0] = firstIndicator
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, :, -1] = lastIndicator
                         
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -1119,12 +1085,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -1149,11 +1114,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -1179,19 +1142,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, :, 0] = firstIndicator
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, :, -1] = lastIndicator
                         
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -1209,12 +1170,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -1239,11 +1199,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -1269,19 +1227,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, :, 0] = firstIndicator
                         
-                        lastIndicator = lastIndicator**2
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, :, -1] = lastIndicator
                         
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -1299,12 +1255,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)
@@ -1329,11 +1284,9 @@ def solver(medium, alpha):
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                     l += 1
                 
-                        Image = Image**2
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Image = np.sqrt(Image)
                         Histogram[:, :, :, 0] = Image
                         userResponded = True
                         break
@@ -1359,19 +1312,17 @@ def solver(medium, alpha):
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
                                     l += 1
                                     
-                        firstIndicator = firstIndicator**2
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                    
-                        lastIndicator = lastIndicator**2
+                        Histogram[:, :, :, 0] = firstIndicator
+                        
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, :, -1] = lastIndicator
                         
-                        Histogram[:, :, :, 0] = np.sqrt(firstIndicator)
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
-                        Image += 0.5 * (firstIndicator + lastIndicator)
+                        Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                         
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
                             TF = timeShift(tempTFarray, tau[it], dt)
@@ -1389,12 +1340,11 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                                         
-                            indicator = indicator**2
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = np.sqrt(indicator)
-                            Image += indicator
+                            Histogram[:, :, :, it] = indicator
+                            Image += indicator**2
                             
                         Image *= deltaTau / T
                         Image = np.sqrt(Image)

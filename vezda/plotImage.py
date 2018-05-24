@@ -669,6 +669,7 @@ def cli():
                 fig3 = plt.figure()
                 ax3 = fig3.add_subplot(111, projection='3d')
                 ax3.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], color='silver')
+                ax3.view_init(elev=10, azim=340)
                 ax3.set_title('''Isosurface @ %s'''%(isolevel))
                 if xu != '':
                     ax3.set_xlabel(xlabel + ' (%s)' %(xu))
@@ -694,7 +695,7 @@ def cli():
                     if not Path('./movie').exists():
                         Path('./movie').mkdir(parents=True, exist_ok=True)
                     for angle in trange(360, desc='Saving movie frames'):
-                        ax3.view_init(elev=10., azim=angle)
+                        ax3.view_init(elev=10, azim=angle)
                         fig3.savefig('./movie/movie%d' % angle + '.' + pltformat,
                                      format=pltformat)
             else:
