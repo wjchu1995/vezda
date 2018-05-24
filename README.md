@@ -37,7 +37,7 @@ By default, pip will install the Vezda software package under the **site-package
 $ vzhome
 /path/to/your/python/site-packages/vezda
 ```
-You can easily change to this directory be entering:
+You can easily change to this folder be entering:
 ```
 $ cd `vzhome`
 ```
