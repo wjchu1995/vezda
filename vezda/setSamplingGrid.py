@@ -79,7 +79,7 @@ def cli():
             sys.exit('\nA space-time sampling grid has not been set up.\n')
             
         else:   # arguments were passed with 'vzgrid' call
-            if args.xaxis is None and args.yaxis is None:
+            if args.xaxis is None or args.yaxis is None:
                 sys.exit('''
                          Error: Both of the command-line arguments \'--xaxis\' and \'--yaxis\'
                          must be specified (a minimum of two space dimenions is required).
