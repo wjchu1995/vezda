@@ -1,7 +1,0 @@
-argparse
-matplotlib
-numpy
-pathlib
-scipy
-scikit-image
-tqdm
