@@ -429,8 +429,8 @@ def cli():
                              ''')
             else:
                 y = samplingGrid['y']
-                ystart = x[0]
-                ystop = x[-1]
+                ystart = y[0]
+                ystop = y[-1]
                 ynum = len(y)
             
             #==============================================================================
