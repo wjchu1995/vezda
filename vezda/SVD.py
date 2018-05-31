@@ -239,7 +239,7 @@ def cli():
                 No action specified. A singular-value decomposition for %s values/vectors
                 already exists. Please specify at least one of '-k/--numVals' or '-p/--plot'
                 arguments with 'vzsvd' command.
-                ''' %(args.numVals)))
+                ''' %(len(s))))
     #==============================================================================
     # if an SVD does not already exist...
     elif any(v is None for v in [s, U, V]) and args.numVals is not None and args.plot is True:

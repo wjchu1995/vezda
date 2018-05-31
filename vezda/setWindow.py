@@ -648,7 +648,7 @@ def cli():
     
     print('\nSetting up window parameters for data volume:\n')
     
-    print('\nwindow @ receivers : start =', rstart)
+    print('window @ receivers : start =', rstart)
     print('window @ receivers : stop =', rstop)
     print('window @ receivers : step =', rstep, '\n')
     

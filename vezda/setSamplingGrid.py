@@ -276,7 +276,7 @@ def cli():
             if ndspace == 2:
                 print('\nCurrent sampling grid:\n')
                 
-                print('3D space-time\n')
+                print('*** 3D space-time ***\n')
                 
                 print('grid @ x-axis : start =', xstart)
                 print('grid @ x-axis : stop =', xstop)
@@ -299,7 +299,7 @@ def cli():
                 
                 print('\nCurrent sampling grid:\n')
                 
-                print('4D space-time\n')
+                print('*** 4D space-time ***\n')
                 
                 print('grid @ x-axis : start =', xstart)
                 print('grid @ x-axis : stop =', xstop)
@@ -503,7 +503,7 @@ def cli():
                     
     #==============================================================================
     if ndspace == 2:
-        print('\nSetting up three-dimensional space-time sampling grid:\n')
+        print('\nSetting up 3D space-time sampling grid:\n')
         print('grid @ x-axis : start =', xstart)
         print('grid @ x-axis : stop =', xstop)
         print('grid @ x-axis : num =', xnum, '\n')
@@ -518,7 +518,7 @@ def cli():
         np.savez('samplingGrid.npz', ndspace=ndspace, x=x, y=y, tau=tau)
     
     elif ndspace == 3:                    
-        print('\nSetting up four-dimensional space-time sampling grid:\n')
+        print('\nSetting up 4D space-time sampling grid:\n')
         print('grid @ x-axis : start =', xstart)
         print('grid @ x-axis : stop =', xstop)
         print('grid @ x-axis : num =', xnum, '\n')
