@@ -45,7 +45,6 @@ setup(name = 'vezda',
                           'pathlib',
                           'scipy',
                           'scikit-image',
-                          'textwrap',
                           'tqdm'],
       entry_points = {
               'console_scripts': [
