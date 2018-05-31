@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import textwrap
 import pickle
 import numpy as np
 import matplotlib
@@ -534,14 +535,15 @@ def cli():
         scatterer = None
         
     if scatterer is None and showScatterer == True:
-        sys.exit('''
-              Attempted to load the file containing the scatterer coordinates,
-              but no such file exists. If a file exists containing the scatterer
-              points, run 'vzdata --path=<path/to/data/>' command and specify
-              the file containing the scatterer points when prompted. Otherwise,
-              specify 'no' when asked if a file containing the scatterer points
-              exists.
-              ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Attempted to load the file containing the scatterer coordinates,
+                but no such file exists. If a file exists containing the scatterer
+                points, run 'vzdata --path=<path/to/data/>' command and specify
+                the file containing the scatterer points when prompted. Otherwise,
+                specify 'no' when asked if a file containing the scatterer points
+                exists.
+                '''))
     
     if Path('window.npz').exists():
         windowDict = np.load('window.npz')
@@ -747,14 +749,15 @@ def cli():
                 ax1.set_title(r'$\alpha = %s$' %(alpha))
     
     elif args.spacetime is True and not Path('image.npz').exists():
-        sys.exit('''
-                 Error: Cannot view support of source function in space-time without
-                 first solving for the given sampling grid. Run 
-                     
-                 'vzsolve --regPar=<value>'
-                 
-                 to make this option available.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot view support of source function in space-time without
+                first solving for the given sampling grid. Run 
+                    
+                'vzsolve --regPar=<value>'
+                
+                to make this option available.
+                 '''))
         
     try:
         ax1

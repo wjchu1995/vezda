@@ -15,6 +15,7 @@
 
 import os
 import sys
+import textwrap
 import numpy as np
 #from vezda.Morozov import Morozov
 from vezda.Tikhonov import Tikhonov
@@ -373,14 +374,15 @@ def solver(medium, alpha):
                 # corresponding to different sampling points in time
                 tempTFarray = np.load(str(datadir['testFuncs']))
             else:
-                sys.exit('''
-                         FileNotFoundError: Attempted to load file containing test
-                         functions, but no such file exists. If a file exists containing
-                         the test functions, run 'vzdata --path=<path/to/data/>' command 
-                         and specify the file containing the test functions when prompted.
-                         Otherwise, specify 'no' when asked if a file containing the test
-                         functions exists.
-                         ''')
+                sys.exit(textwrap.dedent(
+                        '''
+                        FileNotFoundError: Attempted to load file containing test
+                        functions, but no such file exists. If a file exists containing
+                        the test functions, run 'vzdata --path=<path/to/data/>' command 
+                        and specify the file containing the test functions when prompted.
+                        Otherwise, specify 'no' when asked if a file containing the test
+                        functions exists.
+                        '''))
             # Apply the receiver window, if any
             tempTFarray = tempTFarray[rinterval, :, :]
             
@@ -389,12 +391,14 @@ def solver(medium, alpha):
             TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
             
             userResponded = False
-            print('''
-                  In what order was the sampling grid spanned to compute the test functions?
-                  Enter 'xy' if for each x, loop over y. (Default)
-                  Enter 'yx' if for each y, loop over x.
-                  Enter 'q/quit' to abort the calculation.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 In what order was the sampling grid spanned to compute the test functions?
+                 
+                 Enter 'xy' if for each x, loop over y. (Default)
+                 Enter 'yx' if for each y, loop over x.
+                 Enter 'q/quit' to abort the calculation.
+                 '''))
             while userResponded == False:
                 order = input('Order: ')
                 if order == '' or order == 'xy':
@@ -565,12 +569,14 @@ def solver(medium, alpha):
                     sys.exit('Aborting calculation.')
                 
                 else:
-                    print('''
-                          Invalid response. Please enter one of the following:
-                          Enter 'xy' if for each x, loop over y. (Default)
-                          Enter 'yx' if for each y, loop over x.
-                          Enter 'q/quit' to abort the calculation.
-                          ''')
+                    print(textwrap.dedent(
+                         '''
+                         Invalid response. Please enter one of the following:
+                         
+                         Enter 'xy' if for each x, loop over y. (Default)
+                         Enter 'yx' if for each y, loop over x.
+                         Enter 'q/quit' to abort the calculation.
+                         '''))
                         
             np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
@@ -812,14 +818,15 @@ def solver(medium, alpha):
                 # corresponding to different sampling points in time
                 tempTFarray = np.load(str(datadir['testFuncs']))
             else:
-                sys.exit('''
-                         FileNotFoundError: Attempted to load file containing test
-                         functions, but no such file exists. If a file exists containing
-                         the test functions, run 'vzdata --path=<path/to/data/>' command 
-                         and specify the file containing the test functions when prompted.
-                         Otherwise, specify 'no' when asked if a file containing the test
-                         functions exists.
-                         ''')
+                sys.exit(textwrap.dedent(
+                        '''
+                        FileNotFoundError: Attempted to load file containing test
+                        functions, but no such file exists. If a file exists containing
+                        the test functions, run 'vzdata --path=<path/to/data/>' command 
+                        and specify the file containing the test functions when prompted.
+                        Otherwise, specify 'no' when asked if a file containing the test
+                        functions exists.
+                        '''))
             # Apply the receiver window, if any
             tempTFarray = tempTFarray[rinterval, :, :]
             
@@ -828,16 +835,18 @@ def solver(medium, alpha):
             TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
             
             userResponded = False
-            print('''
-                  In what order was the sampling grid spanned to compute the test functions?
-                  Enter 'xyz' if for each x, for each y, loop over z. (Default)
-                  Enter 'xzy' if for each x, for each z, loop over y.
-                  Enter 'yxz' if for each y, for each x, loop over z.
-                  Enter 'yzx' if for each y, for each z, loop over x.
-                  Enter 'zxy' if for each z, for each x, loop over y.
-                  Enter 'zyx' if for each z, for each y, loop over x
-                  Enter 'q/quit' to abort the calculation.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 In what order was the sampling grid spanned to compute the test functions?
+                 
+                 Enter 'xyz' if for each x, for each y, loop over z. (Default)
+                 Enter 'xzy' if for each x, for each z, loop over y.
+                 Enter 'yxz' if for each y, for each x, loop over z.
+                 Enter 'yzx' if for each y, for each z, loop over x.
+                 Enter 'zxy' if for each z, for each x, loop over y.
+                 Enter 'zyx' if for each z, for each y, loop over x
+                 Enter 'q/quit' to abort the calculation.
+                 '''))
             while userResponded == False:
                 order = input('Order: ')
                 if order == '' or order == 'xyz':
@@ -1353,16 +1362,18 @@ def solver(medium, alpha):
                 elif order == 'q' or order == 'quit':
                     sys.exit('Aborting calculation.')
                 else:
-                    print('''
-                          Invalid response. Please enter one of the following:
-                          Enter 'xyz' if for each x, for each y, loop over z. (Default)
-                          Enter 'xzy' if for each x, for each z, loop over y.
-                          Enter 'yxz' if for each y, for each x, loop over z.
-                          Enter 'yzx' if for each y, for each z, loop over x.
-                          Enter 'zxy' if for each z, for each x, loop over y.
-                          Enter 'zyx' if for each z, for each y, loop over x
-                          Enter 'q/quit' to abort the calculation.
-                          ''')
+                    print(textwrap.dedent(
+                         '''
+                         Invalid response. Please enter one of the following:
+                         
+                         Enter 'xyz' if for each x, for each y, loop over z. (Default)
+                         Enter 'xzy' if for each x, for each z, loop over y.
+                         Enter 'yxz' if for each y, for each x, loop over z.
+                         Enter 'yzx' if for each y, for each z, loop over x.
+                         Enter 'zxy' if for each z, for each x, loop over y.
+                         Enter 'zyx' if for each z, for each y, loop over x
+                         Enter 'q/quit' to abort the calculation.
+                         '''))
                         
             np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,

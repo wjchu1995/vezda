@@ -16,6 +16,7 @@
 import os
 import sys
 import argparse
+import textwrap
 import numpy as np
 from pathlib import Path
 
@@ -32,14 +33,15 @@ def cli():
         receivers = os.path.join(datadir, 'receiverPoints.npy')
     else:
         userResponded = False
-        print('''
-              Error: Expected file \'receiverPoints.npy\' not found. Does a file
-              exist containing the receiver coordinates? (This is a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the coordinates of the
-              receivers (must be binary NumPy '.npy' format). (Default)
-              Enter 'n/no' or 'q/quit to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Error: Expected file \'receiverPoints.npy\' not found. Does a file
+             exist containing the receiver coordinates? (This is a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the coordinates of the
+             receivers (must be binary NumPy '.npy' format). (Default)
+             Enter 'n/no' or 'q/quit to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == 'y' or answer == 'yes':
@@ -64,14 +66,15 @@ def cli():
         sources = os.path.join(datadir, 'sourcePoints.npy')
     else:
         userResponded = False
-        print('''
-              Error: Expected file \'sourcesPoints.npy\' not found. Does a file
-              exist containing the source coordinates? (This is a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the coordinates of the
-              sources (must be binary NumPy '.npy' format). (Default)
-              Enter 'n/no' or 'q/quit to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Error: Expected file \'sourcesPoints.npy\' not found. Does a file
+             exist containing the source coordinates? (This is a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the coordinates of the
+             sources (must be binary NumPy '.npy' format). (Default)
+             Enter 'n/no' or 'q/quit to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == 'y' or answer == 'yes':
@@ -96,15 +99,16 @@ def cli():
         noScatterer = False
     else:
         userResponded = False
-        print('''
-              Warning: Expected file \'scattererPoints.npy\' not found. Does a file
-              exist containing the scatterer coordinates? (This is NOT a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the coordinates of the
-              scatterer (must be binary NumPy '.npy' format).
-              Enter 'n/no' to proceed without specifying the scatterer coordinates. (Default)
-              Enter 'q/quit' to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Warning: Expected file \'scattererPoints.npy\' not found. Does a file
+             exist containing the scatterer coordinates? (This is NOT a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the coordinates of the
+             scatterer (must be binary NumPy '.npy' format).
+             Enter 'n/no' to proceed without specifying the scatterer coordinates. (Default)
+             Enter 'q/quit' to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == 'y' or answer == 'yes':
@@ -134,14 +138,15 @@ def cli():
         recordingTimes = os.path.join(datadir, 'recordingTimes.npy')
     else:
         userResponded = False
-        print('''
-              Error: Expected file \'recordingTimes.npy\' not found. Does a file
-              exist containing the recording times? (This is a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the recording
-              times (must be binary NumPy '.npy' format). (Default)
-              Enter 'n/no' or 'q/quit to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Error: Expected file \'recordingTimes.npy\' not found. Does a file
+             exist containing the recording times? (This is a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the recording
+             times (must be binary NumPy '.npy' format). (Default)
+             Enter 'n/no' or 'q/quit to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == 'y' or answer == 'yes':
@@ -165,14 +170,15 @@ def cli():
         scatteredData = os.path.join(datadir, 'scatteredData.npy')
     else:
         userResponded = False
-        print('''
-              Error: Expected file \'scatteredData.npy\' not found. Does a file
-              exist containing the measured scattered waves? (This is a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the measured
-              scattered waves (must be binary NumPy '.npy' format). (Default)
-              Enter 'n/no' or 'q/quit to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Error: Expected file \'scatteredData.npy\' not found. Does a file
+             exist containing the measured scattered waves? (This is a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the measured
+             scattered waves (must be binary NumPy '.npy' format). (Default)
+             Enter 'n/no' or 'q/quit to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == 'y' or answer == 'yes':
@@ -197,15 +203,16 @@ def cli():
         noTestFuncs = False
     else:
         userResponded = False
-        print('''
-              Warning: Expected file \'testFunctions.npy\' not found. Does a file
-              exist containing the simulated test functions? (This is NOT a required file.)
-              
-              Enter 'y/yes' to specify the filename containing the simulated test
-              functions (must be binary NumPy '.npy' format).
-              Enter 'n/no' to proceed without specifying the test functions. (Default)
-              Enter 'q/quit' to exit this program.
-              ''')
+        print(textwrap.dedent(
+             '''
+             Warning: Expected file \'testFunctions.npy\' not found. Does a file
+             exist containing the simulated test functions? (This is NOT a required file.)
+             
+             Enter 'y/yes' to specify the filename containing the simulated test
+             functions (must be binary NumPy '.npy' format).
+             Enter 'n/no' to proceed without specifying the test functions. (Default)
+             Enter 'q/quit' to exit this program.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == 'y' or answer == 'yes':
@@ -238,15 +245,16 @@ def cli():
             samplingPoints = os.path.join(datadir, 'samplingPoints.npy')
         else:
             userResponded = False
-            print('''
-                  Error: Expected file \'samplingPoints.npy\' not found. Does a file
-                  exist containing the space-time sampling points? (This file is
-                  required only if test functions are provided.)
-                  
-                  Enter 'y/yes' to specify the filename containing the sampling points
-                  (must be binary NumPy '.npy' format). (Default)
-                  Enter 'n/no' or 'q/quit' to exit this program.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 Error: Expected file \'samplingPoints.npy\' not found. Does a file
+                 exist containing the space-time sampling points? (This file is
+                 required only if test functions are provided.)
+                 
+                 Enter 'y/yes' to specify the filename containing the sampling points
+                 (must be binary NumPy '.npy' format). (Default)
+                 Enter 'n/no' or 'q/quit' to exit this program.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == 'y' or answer == 'yes':

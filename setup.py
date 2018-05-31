@@ -13,7 +13,7 @@ if sys.version_info <= (2,7):
              ''')
 
 setup(name = 'vezda',
-      version = '0.3.4',
+      version = '0.3.5',
       description = 'A set of command-line tools for imaging with the linear sampling method',
       python_requires = '>=3',
       classifiers = [
@@ -40,6 +40,7 @@ setup(name = 'vezda',
                           'pathlib',
                           'scipy',
                           'scikit-image',
+                          'textwrap',
                           'tqdm'],
       entry_points = {
               'console_scripts': [

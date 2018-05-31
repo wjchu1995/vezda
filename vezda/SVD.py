@@ -16,6 +16,7 @@
 import os
 import sys
 import argparse
+import textwrap
 from pathlib import Path
 from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.fftpack import fft, ifft
@@ -38,17 +39,19 @@ def isValid(numVals):
                 isValid = True
                 break
             else:
-                print('''
-                      ValueError: Argument '-k/--numVals' must be a positive integer 
-                      between 1 and the order of the square input matrix.
-                      ''')
+                print(textwrap.dedent(
+                     '''
+                     ValueError: Argument '-k/--numVals' must be a positive integer 
+                     between 1 and the order of the square input matrix.
+                     '''))
                 isValid = False
                 break
         elif type(numVals) != int:
-            print('''
-                  TypeError: Argument '-k/--numVals' must be a positive integer 
-                  between 1 and the order of the square input matrix.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 TypeError: Argument '-k/--numVals' must be a positive integer 
+                 between 1 and the order of the square input matrix.
+                 '''))
             break
         
     return isValid
@@ -86,13 +89,15 @@ def cli():
     if all(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
         if args.numVals >= 1 and args.numVals == len(s):
             userResponded = False
-            print('''
-                  A singular-value decomposition for {n} values/vectors already exists. 
-                  What would you like to do?
-                  Enter '1' to specify a new number of values/vectors to compute. (Default)
-                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
-                  Enter 'q/quit' to exit.
-                  '''.format(n=args.numVals))
+            print(textwrap.dedent(
+                 '''
+                 A singular-value decomposition for {n} values/vectors already exists. 
+                 What would you like to do?
+                 
+                 Enter '1' to specify a new number of values/vectors to compute. (Default)
+                 Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
+                 Enter 'q/quit' to exit.
+                 '''.format(n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -120,15 +125,17 @@ def cli():
                 
         elif args.numVals < 1:
             userResponded = False
-            print('''
-                  ValueError: Argument '-k/--numVals' must be a positive integer 
-                  between 1 and the order of the square input matrix. The parameter will
-                  be set to the default value of 6.
-                  What would you like to do?
-                  Enter '1' to specify a value of the parameter. (Default)
-                  Enter '2' to proceed with the default value.
-                  Enter 'q/quit' exit the program.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 ValueError: Argument '-k/--numVals' must be a positive integer 
+                 between 1 and the order of the square input matrix. The parameter will
+                 be set to the default value of 6.
+                 What would you like to do?
+                 
+                 Enter '1' to specify a value of the parameter. (Default)
+                 Enter '2' to proceed with the default value.
+                 Enter 'q/quit' exit the program.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -157,13 +164,15 @@ def cli():
     elif all(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is False:
         if args.numVals >= 1 and args.numVals == len(s):
             userResponded = False
-            print('''
-                  A singular-value decomposition for {n} values/vectors already exists. 
-                  What would you like to do?
-                  Enter '1' to specify a new number of values/vectors to compute. (Default)
-                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
-                  Enter 'q/quit' to exit.
-                  '''.format(n=args.numVals))
+            print(textwrap.dedent(
+                 '''
+                 A singular-value decomposition for {n} values/vectors already exists. 
+                 What would you like to do?
+                 
+                 Enter '1' to specify a new number of values/vectors to compute. (Default)
+                 Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
+                 Enter 'q/quit' to exit.
+                 '''.format(n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -191,15 +200,17 @@ def cli():
                 
         elif args.numVals < 1:
             userResponded = False
-            print('''
-                  ValueError: Argument '-k/--numVals' must be a positive integer 
-                  between 1 and the order of the square input matrix. The parameter will
-                  be set to the default value of 6.
-                  What would you like to do?
-                  Enter '1' to specify a value of the parameter. (Default)
-                  Enter '2' to proceed with the default value.
-                  Enter 'q/quit' exit the program.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 ValueError: Argument '-k/--numVals' must be a positive integer 
+                 between 1 and the order of the square input matrix. The parameter will
+                 be set to the default value of 6.
+                 What would you like to do?
+                 
+                 Enter '1' to specify a value of the parameter. (Default)
+                 Enter '2' to proceed with the default value.
+                 Enter 'q/quit' exit the program.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -223,11 +234,12 @@ def cli():
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 
     elif all(v is not None for v in [s, U, V]) and args.numVals is None and args.plot is False:
-        sys.exit('''
-                 No action specified. A singular-value decomposition for %s values/vectors
-                 already exists. Please specify at least one of '-k/--numVals' or '-p/--plot'
-                 arguments with 'vzsvd' command.
-                 ''' %(args.numVals))
+        sys.exit(textwrap.dedent(
+                '''
+                No action specified. A singular-value decomposition for %s values/vectors
+                already exists. Please specify at least one of '-k/--numVals' or '-p/--plot'
+                arguments with 'vzsvd' command.
+                ''' %(args.numVals)))
     #==============================================================================
     # if an SVD does not already exist...
     elif any(v is None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
@@ -237,15 +249,17 @@ def cli():
                 
         elif args.numVals < 1:
             userResponded = False
-            print('''
-                  ValueError: Argument '-k/--numVals' must be a positive integer 
-                  between 1 and the order of the square input matrix. The parameter will
-                  be set to the default value of 6.
-                  What would you like to do?
-                  Enter '1' to specify a value of the parameter. (Default)
-                  Enter '2' to proceed with the default value.
-                  Enter 'q/quit' exit the program.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 ValueError: Argument '-k/--numVals' must be a positive integer 
+                 between 1 and the order of the square input matrix. The parameter will
+                 be set to the default value of 6.
+                 What would you like to do?
+                 
+                 Enter '1' to specify a value of the parameter. (Default)
+                 Enter '2' to proceed with the default value.
+                 Enter 'q/quit' exit the program.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -270,12 +284,14 @@ def cli():
     
     elif any(v is None for v in [s, U, V]) and args.numVals is None and args.plot is True:
         userResponded = False
-        print('''
-              PlotError: A singular-value decomposition does not exist. A plot will be
-              generated after a singular-value decomposition has been computed.
-              Enter '1' to specify a number of singular values/vectors to compute. (Default)
-              Enter 'q/quit' to exit.
-              ''')
+        print(textwrap.dedent(
+             '''
+             PlotError: A singular-value decomposition does not exist. A plot will be
+             generated after a singular-value decomposition has been computed.
+             
+             Enter '1' to specify a number of singular values/vectors to compute. (Default)
+             Enter 'q/quit' to exit.
+             '''))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == '1':
@@ -299,15 +315,17 @@ def cli():
                 
         elif args.numVals < 1:
             userResponded = False
-            print('''
-                  ValueError: Argument '-k/--numVals' must be a positive integer 
-                  between 1 and the order of the square input matrix. The parameter will
-                  be set to the default value of 6.
-                  What would you like to do?
-                  Enter '1' to specify a value of the parameter. (Default)
-                  Enter '2' to proceed with the default value.
-                  Enter 'q/quit' exit the program.
-                  ''')
+            print(textwrap.dedent(
+                 '''
+                 ValueError: Argument '-k/--numVals' must be a positive integer 
+                 between 1 and the order of the square input matrix. The parameter will
+                 be set to the default value of 6.
+                 What would you like to do?
+                 
+                 Enter '1' to specify a value of the parameter. (Default)
+                 Enter '2' to proceed with the default value.
+                 Enter 'q/quit' exit the program.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -331,18 +349,19 @@ def cli():
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 
     elif any(v is None for v in [s, U, V]) and args.numVals is None and args.plot is False:
-        sys.exit('''
-                 Nothing to be done. A singular-value decomposition does not exist.
-                 Please specify at least one of '-k/--numVals' or '-p/--plot'
-                 arguments with 'vzsvd' command.
-                 ''')  
+        sys.exit(textwrap.dedent(
+                '''
+                Nothing to be done. A singular-value decomposition does not exist.
+                Please specify at least one of '-k/--numVals' or '-p/--plot'
+                arguments with 'vzsvd' command.
+                '''))  
     #==============================================================================
     if computeSVD:
         # Read in the input file and set up the 3D scattered data array
         datadir = np.load('datadir.npz')
         scatteredData  = np.load(str(datadir['scatteredData']))
         if Path('window.npz').exists():
-            print('Detected user-specified window:')
+            print('\nDetected user-specified window:\n')
             windowDict = np.load('window.npz')
             
             # Apply the receiver window
@@ -352,7 +371,7 @@ def cli():
             rinterval = np.arange(rstart, rstop, rstep)
             print('\nwindow @ receivers : start = ', rstart)
             print('window @ receivers : stop = ', rstop)
-            print('window @ receivers : step = ', rstep)
+            print('window @ receivers : step = ', rstep, '\n')
             
             # Apply the time window
             tstart = windowDict['tstart']
@@ -360,7 +379,7 @@ def cli():
             tstep = windowDict['tstep']
             print('window @ time : start = ', tstart)
             print('window @ time : stop = ', tstop)
-            print('window @ time : step = ', tstep)
+            print('window @ time : step = ', tstep, '\n')
             
             recordingTimes = np.load(str(datadir['recordingTimes']))
             dt = (recordingTimes[-1] - recordingTimes[0]) / (len(recordingTimes) - 1)
@@ -377,7 +396,7 @@ def cli():
             sinterval = np.arange(sstart, sstop, sstep)
             print('window @ sources : start = ', sstart)
             print('window @ sources : stop = ', sstop)
-            print('window @ sources : step = ', sstep)
+            print('window @ sources : step = ', sstep, '\n')
             
             print('\nApplying window to data volume...')
             scatteredData = scatteredData[rinterval, :, :]

@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import textwrap
 import pickle
 import numpy as np
 import matplotlib
@@ -168,12 +169,14 @@ def cli():
     elif args.type == 'testfunc' and args.method is None:
         if Path('VZTestFuncsLSM.npz').exists() and Path('VZTestFuncsTELSM.npz').exists():
             userResponded = False
-            print('''
-            Detected two different simulated test functions available to plot.
-            Enter '1' to plot the test functions for the classical linear sampling method. (Default)
-            Enter '2' to plot the test functions for the total-energy linear sampling method.
-            Enter 'q/quit' to exit.
-            ''')
+            print(textwrap.dedent(
+                 '''
+                 Detected two different simulated test functions available to plot.
+                 
+                 Enter '1' to plot the test functions for the classical linear sampling method. (Default)
+                 Enter '2' to plot the test functions for the total-energy linear sampling method.
+                 Enter 'q/quit' to exit.
+                 '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -230,13 +233,14 @@ def cli():
             userResponded = True
             
         elif not Path('VZTestFuncsLSM.npz').exists() and not Path('VZTestFuncsTELSM.npz').exists():
-            sys.exit('''
-            Error: No test functions exist to plot. Run the command
-            
-            vzsolve --method=<lsm/telsm> --medium=<constant/variable> 
-            
-            to make test functions available for plotting.
-            ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: No test functions exist to plot. Run the command
+                    
+                    vzsolve --method=<lsm/telsm> --medium=<constant/variable> 
+                    
+                    to make test functions available for plotting.
+                    '''))
         
     if args.map == 'n' or args.map == 'no' or args.map == 'false':
         showMap = False

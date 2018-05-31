@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import textwrap
 import vezda.TELSM
 
 def cli():
@@ -31,10 +32,11 @@ def cli():
         # alpha is the value of the regularization parameter
         alpha = args.regPar
     elif args.regPar is not None and args.regPar < 0:
-        sys.exit('''
-              Error: Optional argument '--regPar/--alpha' cannot be negative. 
-              The regularization parameter must be greater than or equal to zero.
-              ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Optional argument '--regPar/--alpha' cannot be negative. 
+                The regularization parameter must be greater than or equal to zero.
+                '''))
     elif args.regPar is None:
         alpha = 0
         

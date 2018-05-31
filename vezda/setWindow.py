@@ -15,6 +15,7 @@
 
 import sys
 import argparse
+import textwrap
 import numpy as np
 
 def cli():
@@ -75,34 +76,39 @@ def cli():
     if args.time != None and args.tstart == None and args.tstop == None and args.tstep == None:
         time = args.time.split(',')
         if len(time) != 3:
-            sys.exit('''
-                     Error: Must specify three values when using --time parameter.
-                     Syntax: --time=start,stop,step
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Must specify three values when using --time parameter.
+                    Syntax: --time=start,stop,step
+                    '''))
         if recordingTimes[0] <= float(time[0]) and float(time[0]) < float(time[1]) and float(time[1]) <= recordingTimes[-1] and int(time[2]) > 0:
             tstart = float(time[0])
             tstop = float(time[1])
             tstep = int(time[2])
         elif float(time[0]) >= float(time[1]):
-            sys.exit('''
-                     Error: Starting value of the time window must be less
-                     than the ending value of the time window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the time window must be less
+                    than the ending value of the time window.
+                    '''))
         elif recordingTimes[0] > float(time[0]) or float(time[0]) > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Starting value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif recordingTimes[0] > float(time[1]) or float(time[1]) > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Ending value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif int(time[2]) <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.time == None and args.tstart != None and args.tstop != None and args.tstep != None:
         if recordingTimes[0] <= args.tstart and args.tstart < args.tstop and args.tstop <= recordingTimes[-1] and args.tstep > 0:
@@ -110,25 +116,29 @@ def cli():
             tstop = args.tstop
             tstep = args.tstep
         elif args.tstart >= args.tstop:
-            sys.exit('''
-                     Error: Starting value of the time window must be less
-                     than the ending value of the time window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the time window must be less
+                    than the ending value of the time window.
+                    '''))
         elif recordingTimes[0] > args.tstart or args.tstart > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Starting value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif recordingTimes[0] > args.tstop or args.tstop > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Ending value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif args.tstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.time == None and args.tstart == None and args.tstop != None and args.tstep != None:
         if recordingTimes[0] < args.tstop and args.tstop <= recordingTimes[-1] and args.tstep > 0:
@@ -136,15 +146,17 @@ def cli():
             tstop = args.tstop
             tstep = args.tstep
         elif recordingTimes[0] >= args.tstop or args.tstop > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Ending value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif args.tstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     
     elif args.time == None and args.tstart != None and args.tstop == None and args.tstep != None:
@@ -153,15 +165,17 @@ def cli():
             tstop = recordingTimes[-1]
             tstep = args.tstep
         elif recordingTimes[0] > args.tstart or args.tstart >= recordingTimes[-1]:
-            sys.exit('''
-                     Error: Beginning value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif args.tstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.time == None and args.tstart != None and args.tstop != None and args.tstep == None:
         if recordingTimes[0] <= args.tstart and args.tstart < args.tstop and args.tstop <= recordingTimes[-1]:
@@ -169,20 +183,23 @@ def cli():
             tstop = args.tstop
             tstep = 1
         elif args.tstart >= args.tstop:
-            sys.exit('''
-                     Error: Starting value of the time window must be less
-                     than the ending value of the time window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the time window must be less
+                    than the ending value of the time window.
+                    '''))
         elif recordingTimes[0] > args.tstart or args.tstart >= recordingTimes[-1]:
-            sys.exit('''
-                     Error: Beginning value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
         elif recordingTimes[0] > args.tstop or args.tstop >= recordingTimes[-1]:
-            sys.exit('''
-                     Error: Beginning value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
     
     elif args.time == None and args.tstart != None and args.tstop == None and args.tstep == None:
         if recordingTimes[0] <= args.tstart and args.tstart < recordingTimes[-1]:
@@ -190,10 +207,11 @@ def cli():
             tstop = recordingTimes[-1]
             tstep = 1
         elif recordingTimes[0] > args.tstart or args.tstart >= recordingTimes[-1]:
-            sys.exit('''
-                     Error: Beginning value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
     
     elif args.time == None and args.tstart == None and args.tstop != None and args.tstep == None:
         if recordingTimes[0] < args.tstop and args.tstop <= recordingTimes[-1]:
@@ -201,10 +219,11 @@ def cli():
             tstop = args.tstop
             tstep = 1
         elif recordingTimes[0] >= args.tstop or args.tstop > recordingTimes[-1]:
-            sys.exit('''
-                     Error: Ending value of the time window must lie within
-                     the recorded time interval (%s, %s).
-                     ''' %(recordingTimes[0], recordingTimes[-1]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the time window must lie within
+                    the recorded time interval (%s, %s).
+                    ''' %(recordingTimes[0], recordingTimes[-1])))
     
     elif args.time == None and args.tstart == None and args.tstop == None and args.tstep != None:
         if args.tstep > 0:
@@ -212,10 +231,11 @@ def cli():
             tstop = recordingTimes[-1]
             tstep = args.tstep
         elif args.tstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
         
     elif args.time == None and args.tstart == None and args.tstop == None and args.tstep == None:
         tstart = recordingTimes[0]
@@ -223,56 +243,64 @@ def cli():
         tstep = 1
         
     elif args.time != None and args.tstart != None:
-        sys.exit('''
-                 Error: Cannot use --time together with any of --tstart/tstop/tstep.
-                 Must use either --time by itself or a combination of --tstart/tstop/tstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --time together with any of --tstart/tstop/tstep.
+                Must use either --time by itself or a combination of --tstart/tstop/tstep.
+                '''))
     
     elif args.time != None and args.tstop != None:
-        sys.exit('''
-                 Error: Cannot use --time together with any of --tstart/tstop/tstep.
-                 Must use either --time by itself or a combination of --tstart/tstop/tstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --time together with any of --tstart/tstop/tstep.
+                Must use either --time by itself or a combination of --tstart/tstop/tstep.
+                '''))
     
     elif args.time != None and args.tstep != None:
-        sys.exit('''
-                 Error: Cannot use --time together with any of --tstart/tstop/tstep.
-                 Must use either --time by itself or a combination of --tstart/tstop/tstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --time together with any of --tstart/tstop/tstep.
+                Must use either --time by itself or a combination of --tstart/tstop/tstep.
+                '''))
     
     #==============================================================================
     # set source window
     if args.sources != None and args.sstart == None and args.sstop == None and args.sstep == None:
         userSources = args.sources.split(',')
         if len(userSources) != 3:
-            sys.exit('''
-                     Error: Must specify three values when using --sources parameter.
-                     Syntax: --sources=start,stop,step
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Must specify three values when using --sources parameter.
+                    Syntax: --sources=start,stop,step
+                    '''))
         if 0 <= int(userSources[0]) and int(userSources[0]) < int(userSources[1]) and int(userSources[1]) <= sources.shape[0] and int(userSources[2]) > 0:
             sstart = int(userSources[0])
             sstop = int(userSources[1])
             sstep = int(userSources[2])
         elif int(userSources[0]) >= int(userSources[1]):
-            sys.exit('''
-                     Error: Starting value of the source window must be less
-                     than the ending value of the source window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the source window must be less
+                    than the ending value of the source window.
+                    '''))
         elif 0 > int(userSources[0]) or int(userSources[0]) > sources.shape[0]:
-            sys.exit('''
-                     Error: Starting value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif 0 > int(userSources[1]) or int(userSources[1]) > sources.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif int(userSources[2]) <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.sources == None and args.sstart != None and args.sstop != None and args.sstep != None:
         if 0 <= args.sstart and args.sstart < args.sstop and args.sstop <= sources.shape[0] and args.sstep > 0:
@@ -280,25 +308,29 @@ def cli():
             sstop = args.sstop
             sstep = args.sstep
         elif args.sstart >= args.sstop:
-            sys.exit('''
-                     Error: Starting value of the source window must be less
-                     than the ending value of the source window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the source window must be less
+                    than the ending value of the source window.
+                    '''))
         elif 0 > args.sstart or args.sstart > sources.shape[0]:
-            sys.exit('''
-                     Error: Starting value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif 0 > args.sstop or args.sstop > sources.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif args.sstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.sources == None and args.sstart == None and args.sstop != None and args.sstep != None:
         if 0 < args.sstop and args.sstop <= sources.shape[0] and args.sstep > 0:
@@ -306,15 +338,17 @@ def cli():
             sstop = args.sstop
             sstep = args.sstep
         elif 0 >= args.sstop or args.sstop > sources.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif args.sstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
     
     elif args.sources == None and args.sstart != None and args.sstop == None and args.sstep != None:
         if 0 <= args.sstart and args.sstart < sources.shape[0] and args.sstep > 0:
@@ -322,15 +356,17 @@ def cli():
             sstop = sources.shape[0]
             sstep = args.sstep
         elif 0 > args.sstart or args.sstart >= sources.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif args.sstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.sources == None and args.sstart != None and args.sstop != None and args.sstep == None:
         if 0 <= args.sstart and args.sstart < args.sstop and args.sstop <= sources.shape[0]:
@@ -338,20 +374,23 @@ def cli():
             sstop = args.sstop
             sstep = 1
         elif args.sstart >= args.sstop:
-            sys.exit('''
-                     Error: Starting value of the source window must be less
-                     than the ending value of the source window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the source window must be less
+                    than the ending value of the source window.
+                    '''))
         elif 0 > args.sstart or args.sstart >= sources.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
         elif 0 > args.sstop or args.sstop >= sources.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
     
     elif args.sources == None and args.sstart != None and args.sstop == None and args.sstep == None:
         if 0 <= args.sstart and args.sstart < sources.shape[0]:
@@ -359,10 +398,11 @@ def cli():
             sstop = sources.shape[0]
             sstep = 1
         elif 0 > args.sstart or args.sstart >= sources.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
     
     elif args.sources == None and args.sstart == None and args.sstop != None and args.sstep == None:
         if 0 <= args.sstop and args.sstop < sources.shape[0]:
@@ -370,10 +410,11 @@ def cli():
             sstop = args.sstop
             sstep = 1
         elif 0 > args.sstart or args.sstart >= sources.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the source window must lie within
-                     the range of sources (%s, %s).
-                     ''' %(0, sources.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the source window must lie within
+                    the range of sources (%s, %s).
+                    ''' %(0, sources.shape[0])))
     
     elif args.sources == None and args.sstart == None and args.sstop == None and args.sstep != None:
         if args.sstep > 0:
@@ -381,10 +422,11 @@ def cli():
             sstop = sources.shape[0]
             sstep = args.sstep
         elif args.sstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
         
     elif args.sources == None and args.sstart == None and args.sstop == None and args.sstep == None:
         sstart = 0
@@ -392,56 +434,64 @@ def cli():
         sstep = 1
         
     elif args.sources != None and args.sstart != None:
-        sys.exit('''
-                 Error: Cannot use --sources together with any of --sstart/sstop/sstep.
-                 Must use either --sources by itself or a combination of --sstart/sstop/sstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --sources together with any of --sstart/sstop/sstep.
+                Must use either --sources by itself or a combination of --sstart/sstop/sstep.
+                '''))
     
     elif args.sources != None and args.sstop != None:
-        sys.exit('''
-                 Error: Cannot use --sources together with any of --sstart/sstop/sstep.
-                 Must use either --sources by itself or a combination of --sstart/sstop/sstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --sources together with any of --sstart/sstop/sstep.
+                Must use either --sources by itself or a combination of --sstart/sstop/sstep.
+                '''))
     
     elif args.sources != None and args.sstep != None:
-        sys.exit('''
-                 Error: Cannot use --sources together with any of --sstart/sstop/sstep.
-                 Must use either --sourcces by itself or a combination of --sstart/sstop/sstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --sources together with any of --sstart/sstop/sstep.
+                Must use either --sourcces by itself or a combination of --sstart/sstop/sstep.
+                '''))
     
     #==============================================================================
     # set receiver window
     if args.receivers != None and args.rstart == None and args.rstop == None and args.rstep == None:
         userReceivers = args.receivers.split(',')
         if len(userReceivers) != 3:
-            sys.exit('''
-                     Error: Must specify three values when using --receivers parameter.
-                     Syntax: --receivers=start,stop,step
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Must specify three values when using --receivers parameter.
+                    Syntax: --receivers=start,stop,step
+                    '''))
         if 0 <= int(userReceivers[0]) and int(userReceivers[0]) < int(userReceivers[1]) and int(userReceivers[1]) <= receivers.shape[0] and int(userReceivers[2]) > 0:
             rstart = int(userReceivers[0])
             rstop = int(userReceivers[1])
             rstep = int(userReceivers[2])
         elif int(userReceivers[0]) >= int(userReceivers[1]):
-            sys.exit('''
-                     Error: Starting value of the receiver window must be less
-                     than the ending value of the receiver window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the receiver window must be less
+                    than the ending value of the receiver window.
+                    '''))
         elif 0 > int(userReceivers[0]) or int(userReceivers[0]) > receivers.shape[0]:
-            sys.exit('''
-                     Error: Starting value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif 0 > int(userReceivers[1]) or int(userReceivers[1]) > receivers.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif int(userReceivers[2]) <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.receivers == None and args.rstart != None and args.rstop != None and args.rstep != None:
         if 0 <= args.rstart and args.rstart < args.rstop and args.rstop <= receivers.shape[0] and args.rstep > 0:
@@ -449,25 +499,29 @@ def cli():
             rstop = args.rstop
             rstep = args.rstep
         elif args.rstart >= args.rstop:
-            sys.exit('''
-                     Error: Starting value of the receiver window must be less
-                     than the ending value of the receiver window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the receiver window must be less
+                    than the ending value of the receiver window.
+                    '''))
         elif 0 > args.rstart or args.rstart > receivers.shape[0]:
-            sys.exit('''
-                     Error: Starting value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif 0 > args.rstop or args.rstop > receivers.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif args.rstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.receivers == None and args.rstart == None and args.rstop != None and args.rstep != None:
         if 0 < args.rstop and args.rstop <= receivers.shape[0] and args.rstep > 0:
@@ -475,15 +529,17 @@ def cli():
             rstop = args.rstop
             rstep = args.rstep
         elif 0 >= args.rstop or args.rstop > receivers.shape[0]:
-            sys.exit('''
-                     Error: Ending value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Ending value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif args.rstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
     
     elif args.receivers == None and args.rstart != None and args.rstop == None and args.rstep != None:
         if 0 <= args.rstart and args.rstart < receivers.shape[0] and args.rstep > 0:
@@ -491,15 +547,17 @@ def cli():
             rstop = receivers.shape[0]
             rstep = args.rstep
         elif 0 > args.rstart or args.rstart >= receivers.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif args.rstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
             
     elif args.receivers == None and args.rstart != None and args.rstop != None and args.rstep == None:
         if 0 <= args.rstart and args.rstart < args.rstop and args.rstop <= receivers.shape[0]:
@@ -507,20 +565,23 @@ def cli():
             rstop = args.rstop
             rstep = 1
         elif args.rstart >= args.rstop:
-            sys.exit('''
-                     Error: Starting value of the receiver window must be less
-                     than the ending value of the receiver window.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Starting value of the receiver window must be less
+                    than the ending value of the receiver window.
+                    '''))
         elif 0 > args.rstart or args.rstart >= receivers.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
         elif 0 > args.rstop or args.rstop >= receivers.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
     
     elif args.receivers == None and args.rstart != None and args.rstop == None and args.rstep == None:
         if 0 <= args.rstart and args.rstart < receivers.shape[0]:
@@ -528,10 +589,11 @@ def cli():
             rstop = receivers.shape[0]
             rstep = 1
         elif 0 > args.rstart or args.rstart >= receivers.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
     
     elif args.receivers == None and args.rstart == None and args.rstop != None and args.rstep == None:
         if 0 <= args.rstop and args.rstop < receivers.shape[0]:
@@ -539,10 +601,11 @@ def cli():
             rstop = args.rstop
             rstep = 1
         elif 0 > args.rstart or args.rstart >= receivers.shape[0]:
-            sys.exit('''
-                     Error: Beginning value of the receiver window must lie within
-                     the range of receivers (%s, %s).
-                     ''' %(0, receivers.shape[0]))
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Beginning value of the receiver window must lie within
+                    the range of receivers (%s, %s).
+                    ''' %(0, receivers.shape[0])))
     
     elif args.receivers == None and args.rstart == None and args.rstop == None and args.rstep != None:
         if args.rstep > 0:
@@ -550,10 +613,11 @@ def cli():
             rstop = receivers.shape[0]
             rstep = args.rstep
         elif args.rstep <= 0:
-            sys.exit('''
-                     Error: Step size or spacing between array indices must
-                     be a positive integer greater than or equal to 1.
-                     ''')
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Step size or spacing between array indices must
+                    be a positive integer greater than or equal to 1.
+                    '''))
         
     elif args.receivers == None and args.rstart == None and args.rstop == None and args.rstep == None:
         rstart = 0
@@ -561,35 +625,40 @@ def cli():
         rstep = 1
         
     elif args.receivers != None and args.rstart != None:
-        sys.exit('''
-                 Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
-                 Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
+                Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
+                '''))
     
     elif args.receivers != None and args.rstop != None:
-        sys.exit('''
-                 Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
-                 Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
+                Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
+                '''))
     
     elif args.receivers != None and args.rstep != None:
-        sys.exit('''
-                 Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
-                 Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
-                 ''')
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
+                Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
+                '''))
     #==============================================================================
     
-    print('window @ receivers : start = ', rstart)
-    print('window @ receivers : stop = ', rstop)
-    print('window @ receivers : step = ', rstep)
+    print('\nSetting up window parameters for data volume:\n')
     
-    print('window @ time : start = ', tstart)
-    print('window @ time : stop = ', tstop)
-    print('window @ time : step = ', tstep)
+    print('\nwindow @ receivers : start =', rstart)
+    print('window @ receivers : stop =', rstop)
+    print('window @ receivers : step =', rstep, '\n')
     
-    print('window @ sources : start = ', sstart)
-    print('window @ sources : stop = ', sstop)
-    print('window @ sources : step = ', sstep)
+    print('window @ time : start =', tstart)
+    print('window @ time : stop =', tstop)
+    print('window @ time : step =', tstep, '\n')
+    
+    print('window @ sources : start =', sstart)
+    print('window @ sources : stop =', sstop)
+    print('window @ sources : step =', sstep, '\n')
     
     np.savez('window.npz',
              tstart=tstart,
