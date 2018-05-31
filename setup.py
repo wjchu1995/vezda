@@ -12,9 +12,14 @@ if sys.version_info <= (2,7):
              for example.)
              ''')
 
+with open('README.md', 'r') as fh:
+     long_description = fh.read()
+
 setup(name = 'vezda',
-      version = '0.3.5',
+      version = '0.3.6',
       description = 'A set of command-line tools for imaging with the linear sampling method',
+      long_description = long_description,
+      long_description_content_type = 'text/markdown',
       python_requires = '>=3',
       classifiers = [
               'Development Status :: 4 - Beta',
