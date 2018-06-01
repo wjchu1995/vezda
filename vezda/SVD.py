@@ -361,7 +361,7 @@ def cli():
         datadir = np.load('datadir.npz')
         scatteredData  = np.load(str(datadir['scatteredData']))
         if Path('window.npz').exists():
-            print('\nDetected user-specified window:\n')
+            print('Detected user-specified window:\n')
             windowDict = np.load('window.npz')
             
             # Apply the receiver window
@@ -369,7 +369,7 @@ def cli():
             rstop = windowDict['rstop']
             rstep = windowDict['rstep']
             rinterval = np.arange(rstart, rstop, rstep)
-            print('\nwindow @ receivers : start = ', rstart)
+            print('window @ receivers : start = ', rstart)
             print('window @ receivers : stop = ', rstop)
             print('window @ receivers : step = ', rstep, '\n')
             
@@ -398,7 +398,7 @@ def cli():
             print('window @ sources : stop = ', sstop)
             print('window @ sources : step = ', sstep, '\n')
             
-            print('\nApplying window to data volume...')
+            print('Applying window to data volume...')
             scatteredData = scatteredData[rinterval, :, :]
             scatteredData = scatteredData[:, tinterval, :]
             scatteredData = scatteredData[:, :, sinterval]
