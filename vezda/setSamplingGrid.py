@@ -75,182 +75,11 @@ def cli():
         samplingGrid = None
     
     #==============================================================================
-    if samplingGrid is None:
-        if not len(sys.argv) > 1:   # and no arguments were passed...
+    if not len(sys.argv) > 1:   # no arguments were passed...
+        if samplingGrid is None:    # and a sampling grid doesn't exist...
             sys.exit('\nA space-time sampling grid has not been set up.\n')
-            
-        else:   # arguments were passed with 'vzgrid' call
-            if args.xaxis is None or args.yaxis is None:
-                sys.exit(textwrap.dedent(
-                        '''
-                         Error: Both of the command-line arguments \'--xaxis\' and \'--yaxis\'
-                         must be specified (a minimum of two space dimenions is required).
-                         Use the \'--zaxis\' argument to optionally specify a third space
-                         dimension.
-                         '''))
-            #==============================================================================
-            # set grid along t-axis
-            if args.taxis is not None and args.Ntau is None and args.tau is None:
-                # User is specifying the endpoint values of the sampling grid
-                # along the time axis and the number of samples.
-                taxis = args.taxis.split(',')
-                tstart = float(taxis[0])
-                tstop = float(taxis[1])
-                tnum = int(taxis[2])
-                if len(taxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --taxis parameter.
-                            Syntax: --taxis=start,stop,num
-                            '''))
-                if tstart < tstop and tnum > 0:
-                    tau = np.linspace(tstart, tstop, tnum)
-                elif tstart >= tstop:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Starting time value of the sampling grid must be less
-                            than the ending time value of the sampling grid.
-                            '''))
-                elif tnum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the time axis
-                            must be greater than zero.
-                            '''))
-                    
-            elif args.taxis is None and args.Ntau is not None and args.tau is None:
-                # User is specifying the number of samples along the time axis
-                # while the endpoint values are determined automatically by the 
-                # time window containing the measured data.
-                datadir = np.load('datadir.npz')
-                recordingTimes = np.load(str(datadir['recordingTimes']))
-                
-                tstart = 0
-                if Path('window.npz').exists():
-                    windowDict = np.load('window.npz')
-                    tstop = windowDict['tstop']
-                else:
-                    tstop = recordingTimes[-1]
-                    
-                if args.Ntau == 'auto':
-                    tstep = 1 / (4 * pulseFun.peakFreq)    
-                    tau = np.arange(tstart, tstop, tstep)
-                    tnum = len(tau)
-                else:
-                    tnum = int(args.Ntau)
-                if tnum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify a positive number of time samples.
-                            Syntax: --Ntau=num
-                            '''))
-                else:
-                    tau = np.linspace(tstart, tstop, tnum)
         
-            elif args.taxis is None and args.Ntau is None and args.tau is not None:
-                tau = np.asarray([args.tau])
-                tstart = args.tau
-                tstop = tstart
-                tnum = 1
-                
-            elif args.taxis is None and args.Ntau is None and args.tau is None:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: One of the command-line arguments \'--taxis, --Ntau, --tau\'
-                        must be specified to determine the sampling of the time axis.
-                        '''))
-            
-            #==============================================================================
-            # set grid along x-axis
-            xaxis = args.xaxis.split(',')
-            xstart = float(xaxis[0])
-            xstop = float(xaxis[1])
-            xnum = int(xaxis[2])
-            
-            if len(xaxis) != 3:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Must specify three values when using --xaxis parameter.
-                        Syntax: --xaxis=start,stop,num
-                        '''))
-            if xstart < xstop and xnum > 0:
-                x = np.linspace(xstart, xstop, xnum)
-            elif xstart >= xstop:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Starting x-value of the sampling grid must be less
-                        than the ending x-value of the sampling grid.
-                        '''))
-            elif xnum <= 0:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Number of sampling points along the x-axis
-                        must be greater than zero.
-                        '''))
-                
-            #==============================================================================    
-            # set grid along y-axis
-            yaxis = args.yaxis.split(',')
-            ystart = float(yaxis[0])
-            ystop = float(yaxis[1])
-            ynum = int(yaxis[2])
-            
-            if len(yaxis) != 3:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Must specify three values when using --yaxis parameter.
-                        Syntax: --yaxis=start,stop,num
-                        '''))
-            if ystart < ystop and ynum > 0:
-                y = np.linspace(ystart, ystop, ynum)
-            elif ystart >= ystop:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Starting y-value of the sampling grid must be less
-                        than the ending y-value of the sampling grid.
-                        '''))
-            elif ynum <= 0:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error: Number of sampling points along the y-axis
-                        must be greater than zero.
-                        '''))
-            
-            #==============================================================================
-            # set grid along z-axis
-            if args.zaxis is not None:
-                ndspace = 3
-                zaxis = args.zaxis.split(',')
-                zstart = float(zaxis[0])
-                zstop = float(zaxis[1])
-                znum = int(zaxis[2])
-                
-                if len(zaxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --zaxis parameter.
-                            Syntax: --zaxis=start,stop,num
-                            '''))
-                if zstart < zstop and znum > 0:
-                    z = np.linspace(zstart, zstop, znum)
-                elif zstart >= zstop:
-                    sys.exit('''
-                             Error: Starting z-value of the sampling grid must be less
-                             than the ending z-value of the sampling grid.
-                             ''')
-                elif znum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the z-axis
-                            must be greater than zero.
-                            '''))
-            else:
-                ndspace = 2
-                
-    #==============================================================================
-    else:   # a space-time sampling grid already exists...
-        
-        if not len(sys.argv) > 1:  # no arguments were passed with 'vzgrid' call
+        else:   # a sampling grid does exist...
             # Vezda will simply print the current sampling grid and exit
             x = samplingGrid['x']
             xstart = x[0]
@@ -317,75 +146,89 @@ def cli():
                 print('grid @ t-axis : stop =', tstop)
                 print('grid @ t-axis : num =', tnum, '\n')
                 sys.exit()
-        
-        else:   # arguments were passed with 'vzgrid' call
+                  
+    else:   # arguments were passed with 'vzgrid' call
+        if samplingGrid is None and (args.xaxis is None or args.yaxis is None):
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Both of the command-line arguments \'--xaxis\' and \'--yaxis\'
+                    must be specified (a minimum of two space dimenions is required).
+                    Use the \'--zaxis\' argument to optionally specify a third space
+                    dimension.
+                    '''))
+        #==============================================================================
+        # set/update grid along t-axis
+        if args.taxis is not None and args.Ntau is None and args.tau is None:
+            # User is specifying the endpoint values of the sampling grid
+            # along the time axis and the number of samples.
+            taxis = args.taxis.split(',')
+            tstart = float(taxis[0])
+            tstop = float(taxis[1])
+            tnum = int(taxis[2])
+            if len(taxis) != 3:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Must specify three values when using --taxis parameter.
+                        Syntax: --taxis=start,stop,num
+                        '''))
+            if tstart < tstop and tnum > 0:
+                tau = np.linspace(tstart, tstop, tnum)
+            elif tstart >= tstop:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Starting time value of the sampling grid must be less
+                        than the ending time value of the sampling grid.
+                        '''))
+            elif tnum <= 0:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Number of sampling points along the time axis
+                        must be greater than zero.
+                        '''))
+                    
+        elif args.taxis is None and args.Ntau is not None and args.tau is None:
+            # User is specifying the number of samples along the time axis
+            # while the endpoint values are determined automatically by the 
+            # time window containing the measured data.
+            datadir = np.load('datadir.npz')
+            recordingTimes = np.load(str(datadir['recordingTimes']))
             
-            #==============================================================================
-            # update grid along t-axis
-            if args.taxis is not None and args.Ntau is None and args.tau is None:
-                # User is specifying the endpoint values of the sampling grid
-                # along the time axis and the number of samples.
-                taxis = args.taxis.split(',')
-                tstart = float(taxis[0])
-                tstop = float(taxis[1])
-                tnum = int(taxis[2])
-                if len(taxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --taxis parameter.
-                            Syntax: --taxis=start,stop,num
-                            '''))
-                if tstart < tstop and tnum > 0:
-                    tau = np.linspace(tstart, tstop, tnum)
-                elif tstart >= tstop:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Starting time value of the sampling grid must be less
-                            than the ending time value of the sampling grid.
-                            '''))
-                elif tnum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the time axis
-                            must be greater than zero.
-                            '''))
-                    
-            elif args.taxis is None and args.Ntau is not None and args.tau is None:
-                # User is specifying the number of samples along the time axis
-                # while the endpoint values are determined automatically by the 
-                # time window containing the measured data.
-                datadir = np.load('datadir.npz')
-                recordingTimes = np.load(str(datadir['recordingTimes']))
+            tstart = 0
+            if Path('window.npz').exists():
+                windowDict = np.load('window.npz')
+                tstop = windowDict['tstop']
+            else:
+                tstop = recordingTimes[-1]
                 
-                tstart = 0
-                if Path('window.npz').exists():
-                    windowDict = np.load('window.npz')
-                    tstop = windowDict['tstop']
-                else:
-                    tstop = recordingTimes[-1]
-                    
-                if args.Ntau == 'auto':
-                    tstep = 1 / (4 * pulseFun.peakFreq)    
-                    tau = np.arange(tstart, tstop, tstep)
-                    tnum = len(tau)
-                else:
-                    tnum = int(args.Ntau)
-                    if tnum <= 0:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                Error: Must specify a positive number of time samples.
-                                Syntax: --Ntau=num
-                                '''))
-                    else:
-                        tau = np.linspace(tstart, tstop, tnum)
+            if args.Ntau == 'auto':
+                tstep = 1 / (4 * pulseFun.peakFreq)    
+                tau = np.arange(tstart, tstop, tstep)
+                tnum = len(tau)
+            else:
+                tnum = int(args.Ntau)
+            if tnum <= 0:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Must specify a positive number of time samples.
+                        Syntax: --Ntau=num
+                        '''))
+            else:
+                tau = np.linspace(tstart, tstop, tnum)
         
-            elif args.taxis is None and args.Ntau is None and args.tau is not None:
-                tau = np.asarray([args.tau])
-                tstart = args.tau
-                tstop = tstart
-                tnum = 1
+        elif args.taxis is None and args.Ntau is None and args.tau is not None:
+            tau = np.asarray([args.tau])
+            tstart = args.tau
+            tstop = tstart
+            tnum = 1
                 
-            elif args.taxis is None and args.Ntau is None and args.tau is None:
+        elif args.taxis is None and args.Ntau is None and args.tau is None:
+            if samplingGrid is None:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: One of the command-line arguments \'--taxis, --Ntau, --tau\'
+                        must be specified to determine the sampling of the time axis.
+                        '''))
+            else:
                 # sampling along time axis is left unchanged
                 tau = samplingGrid['tau']
                 tnum = len(tau)
@@ -396,111 +239,115 @@ def cli():
                     tstart = tau[0]
                     tstop = tau[-1]
                     
-            #==============================================================================
-            # update grid along x-axis
-            if args.xaxis is not None:
-                xaxis = args.xaxis.split(',')
-                xstart = float(xaxis[0])
-                xstop = float(xaxis[1])
-                xnum = int(xaxis[2])
-                
-                if len(xaxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --xaxis parameter.
-                            Syntax: --xaxis=start,stop,num
-                            '''))
-                if xstart < xstop and xnum > 0:
-                    x = np.linspace(xstart, xstop, xnum)
-                elif xstart >= xstop:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Starting x-value of the sampling grid must be less
-                            than the ending x-value of the sampling grid.
-                            '''))
-                elif xnum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the x-axis
-                            must be greater than zero.
-                            '''))
-            else:
-                x = samplingGrid['x']
-                xstart = x[0]
-                xstop = x[-1]
-                xnum = len(x)
-                
-            #==============================================================================    
-            # update grid along y-axis
-            if args.yaxis is not None:
-                yaxis = args.yaxis.split(',')
-                ystart = float(yaxis[0])
-                ystop = float(yaxis[1])
-                ynum = int(yaxis[2])
-                
-                if len(yaxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --yaxis parameter.
-                            Syntax: --yaxis=start,stop,num
-                            '''))
-                if ystart < ystop and ynum > 0:
-                    y = np.linspace(ystart, ystop, ynum)
-                elif ystart >= ystop:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Starting y-value of the sampling grid must be less
-                            than the ending y-value of the sampling grid.
-                            '''))
-                elif ynum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the y-axis
-                            must be greater than zero.
-                            '''))
-            else:
-                y = samplingGrid['y']
-                ystart = y[0]
-                ystop = y[-1]
-                ynum = len(y)
+        #==============================================================================
+        # set/update grid along x-axis
+        if args.xaxis is not None:
+            xaxis = args.xaxis.split(',')
+            xstart = float(xaxis[0])
+            xstop = float(xaxis[1])
+            xnum = int(xaxis[2])
             
-            #==============================================================================
-            # update grid along z-axis
-            ndspace = int(samplingGrid['ndspace'])
-            if ndspace == 3 and args.zaxis is None:
-                z = samplingGrid['z']
-                zstart = z[0]
-                zstop = z[-1]
-                znum = len(z)
+            if len(xaxis) != 3:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Must specify three values when using --xaxis parameter.
+                        Syntax: --xaxis=start,stop,num
+                        '''))
+            if xstart < xstop and xnum > 0:
+                x = np.linspace(xstart, xstop, xnum)
+            elif xstart >= xstop:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Starting x-value of the sampling grid must be less
+                        than the ending x-value of the sampling grid.
+                        '''))
+            elif xnum <= 0:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Number of sampling points along the x-axis
+                        must be greater than zero.
+                        '''))
+        else:
+            x = samplingGrid['x']
+            xstart = x[0]
+            xstop = x[-1]
+            xnum = len(x)
+
+        #==============================================================================    
+        # set/update grid along y-axis
+        if args.yaxis is not None:
+            yaxis = args.yaxis.split(',')
+            ystart = float(yaxis[0])
+            ystop = float(yaxis[1])
+            ynum = int(yaxis[2])
+            
+            if len(yaxis) != 3:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Must specify three values when using --yaxis parameter.
+                        Syntax: --yaxis=start,stop,num
+                        '''))
+            if ystart < ystop and ynum > 0:
+                y = np.linspace(ystart, ystop, ynum)
+            elif ystart >= ystop:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Starting y-value of the sampling grid must be less
+                        than the ending y-value of the sampling grid.
+                        '''))
+            elif ynum <= 0:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Number of sampling points along the y-axis
+                        must be greater than zero.
+                        '''))
+        else:
+            y = samplingGrid['y']
+            ystart = y[0]
+            ystop = y[-1]
+            ynum = len(y)
+            
+        #==============================================================================
+        # set/update grid along z-axis
+        if args.zaxis is not None:
+            ndspace = 3
+            zaxis = args.zaxis.split(',')
+            zstart = float(zaxis[0])
+            zstop = float(zaxis[1])
+            znum = int(zaxis[2])
+            
+            if len(zaxis) != 3:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Must specify three values when using --zaxis parameter.
+                        Syntax: --zaxis=start,stop,num
+                        '''))
+            if zstart < zstop and znum > 0:
+                z = np.linspace(zstart, zstop, znum)
+            elif zstart >= zstop:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Starting z-value of the sampling grid must be less
+                        than the ending z-value of the sampling grid.
+                        '''))
+            elif znum <= 0:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error: Number of sampling points along the z-axis
+                        must be greater than zero.
+                        '''))
+            
+        else:
+            if samplingGrid is None:
+                ndspace = 2
+            else:
+                ndspace = int(samplingGrid['ndspace'])
+                if ndspace == 3:
+                    z = samplingGrid['z']
+                    zstart = z[0]
+                    zstop = z[-1]
+                    znum = len(z)
                 
-            elif args.zaxis is not None:
-                ndspace = 3
-                zaxis = args.zaxis.split(',')
-                zstart = float(zaxis[0])
-                zstop = float(zaxis[1])
-                znum = int(zaxis[2])
-                
-                if len(zaxis) != 3:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Must specify three values when using --zaxis parameter.
-                            Syntax: --zaxis=start,stop,num
-                            '''))
-                if zstart < zstop and znum > 0:
-                    z = np.linspace(zstart, zstop, znum)
-                elif zstart >= zstop:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Starting z-value of the sampling grid must be less
-                            than the ending z-value of the sampling grid.
-                            '''))
-                elif znum <= 0:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            Error: Number of sampling points along the z-axis
-                            must be greater than zero.
-                            '''))
-                    
     #==============================================================================
     if ndspace == 2:
         print('\nSetting up 3D space-time sampling grid:\n')
