@@ -75,7 +75,13 @@ def cli():
     if datadir is None:
         sys.exit(textwrap.dedent(
                 '''
-                Error: Cannot
+                Error: A relative path to the data directory from the current 
+                directory has not been specified. To access the data from this
+                location, enter:
+                    
+                    vzdata --path=<path/to/data/directory>
+                    
+                from the command line.
                 '''))
     else:
         recordingTimes = np.load(str(datadir['recordingTimes']))
