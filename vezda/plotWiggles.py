@@ -13,9 +13,7 @@
 # limitations under the License.
 #==============================================================================
 
-import sys
 import argparse
-import textwrap
 import pickle
 import numpy as np
 import matplotlib
@@ -28,9 +26,6 @@ def cli():
     parser.add_argument('--type', type=str, choices=['data', 'testfunc'], required=True,
                         help='''Specify whether to plot the scattered wave data or simulated test functions.
                         Type must be either \'data\' or \'testfunc\'.''')
-    parser.add_argument('--method', type=str, choices=['lsm', 'telsm'],
-                        help='''Specify whether to plot the test functions from the classical
-                        linear sampling method 'lsm' or total-energy linear sampling method 'telsm'.''')
     parser.add_argument('--tu', type=str,
                         help='Specify the time units (e.g., \'s\' or \'ms\').')
     parser.add_argument('--au', type=str,
@@ -44,15 +39,6 @@ def cli():
                         be shown if available.''')
     args = parser.parse_args()
     #==============================================================================
-    
-    datadir = np.load('datadir.npz')
-    recordingTimes = np.load(str(datadir['recordingTimes']))
-    receiverPoints = np.load(str(datadir['receivers']))
-    if 'scatterer' in datadir:
-        scatterer = np.load(str(datadir['scatterer']))
-    else:
-        scatterer = None
-    
     # if a plotParams.pkl file already exists, load relevant parameters
     if Path('plotParams.pkl').exists():
         plotParams = pickle.load(open('plotParams.pkl', 'rb'))
@@ -136,111 +122,6 @@ def cli():
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
         
     #==============================================================================
-    if args.type == 'data':
-        # load the 3D data array into variable 'X'
-        # X[receiver, time, source]
-        X = np.load(str(datadir['scatteredData']))
-        time = recordingTimes
-        tau = None
-        sourcePoints = np.load(str(datadir['sources']))
-        
-    elif args.type == 'testfunc' and args.method == 'lsm':
-        TFType = 'lsm'
-        testFuncs = np.load('VZTestFuncsLSM.npz')
-        TFarray = testFuncs['TFshifted']
-        tinterval = testFuncs['tinterval']
-        X = TFarray[:, tinterval, :]
-        time = testFuncs['time'] 
-        tau = testFuncs['tau']
-        sourcePoints = testFuncs['samplingPoints']
-        
-    elif args.type == 'testfunc' and args.method == 'telsm':
-        TFType = 'telsm'
-        testFuncs = np.load('VZTestFuncsTELSM.npz')
-        TFarray = testFuncs['TFarray']
-        X = TFarray[:, :, :, 0]
-        time = testFuncs['time'] 
-        tau = None
-        samplingPoints = testFuncs['samplingPoints']
-        # Extract all but last column of sampling points,
-        # which corresponds to tau (sampling point in time)
-        sourcePoints = samplingPoints[:, :-1]
-        
-    elif args.type == 'testfunc' and args.method is None:
-        if Path('VZTestFuncsLSM.npz').exists() and Path('VZTestFuncsTELSM.npz').exists():
-            userResponded = False
-            print(textwrap.dedent(
-                 '''
-                 Detected two different simulated test functions available to plot.
-                 
-                 Enter '1' to plot the test functions for the classical linear sampling method. (Default)
-                 Enter '2' to plot the test functions for the total-energy linear sampling method.
-                 Enter 'q/quit' to exit.
-                 '''))
-            while userResponded == False:
-                answer = input('Action: ')
-                if answer == '' or answer == '1':
-                    TFType = 'lsm'
-                    testFuncs = np.load('VZTestFuncsLSM.npz')
-                    X = testFuncs['TFshifted']
-                    tinterval = testFuncs['tinterval']
-                    X = X[:, tinterval, :]
-                    time = testFuncs['time'] 
-                    tau = testFuncs['tau']
-                    sourcePoints = testFuncs['samplingPoints']
-                    userResponded = True
-                    break
-                
-                elif answer == '2':
-                    TFType = 'telsm'
-                    testFuncs = np.load('VZTestFuncsTELSM.npz')
-                    TFarray = testFuncs['TFarray']
-                    X = TFarray[:, :, :, 0]
-                    time = testFuncs['time'] 
-                    tau = None
-                    samplingPoints = testFuncs['samplingPoints']
-                    # Extract all but last column of sampling points,
-                    # which corresponds to tau (sampling point in time)
-                    sourcePoints = samplingPoints[:, :-1]
-                    userResponded = True
-                    break
-                
-                elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
-                else:
-                    print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
-        
-        elif Path('VZTestFuncsLSM.npz').exists() and not Path('VZTestFuncsTELSM.npz').exists():
-            TFType = 'lsm'
-            testFuncs = np.load('VZTestFuncsLSM.npz')
-            X = testFuncs['TFarray']
-            time = testFuncs['time'] 
-            tau = testFuncs['tau']
-            sourcePoints = testFuncs['samplingPoints']
-            userResponded = True
-        
-        elif not Path('VZTestFuncsLSM.npz').exists() and Path('VZTestFuncsTELSM.npz').exists():
-            TFType = 'telsm'
-            testFuncs = np.load('VZTestFuncsTELSM.npz')
-            TFarray = testFuncs['TFarray']
-            X = TFarray[:, :, :, 0]
-            time = testFuncs['time'] 
-            tau = None
-            samplingPoints = testFuncs['samplingPoints']
-            # Extract all but last column of sampling points,
-            # which corresponds to tau (sampling point in time)
-            sourcePoints = samplingPoints[:, :-1]
-            userResponded = True
-            
-        elif not Path('VZTestFuncsLSM.npz').exists() and not Path('VZTestFuncsTELSM.npz').exists():
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: No test functions exist to plot. Run the command
-                    
-                    vzsolve --method=<lsm/telsm> --medium=<constant/variable> 
-                    
-                    to make test functions available for plotting.
-                    '''))
         
     if args.map == 'n' or args.map == 'no' or args.map == 'false':
         showMap = False
@@ -267,45 +148,45 @@ def cli():
     
     def process_key(event, tstart, tstop, rinterval, sinterval,
                     receiverPoints, sourcePoints, scatterer,
-                    args, tau, recordingTimes):
+                    args, recordingTimes):
         if showMap:
             fig = event.canvas.figure
             ax1 = fig.axes[0]
             ax2 = fig.axes[1]
             if event.key == 'left' or event.key == 'down':
-                previous_slice(ax1, tstart, tstop, rinterval, sinterval, args, tau,
+                previous_slice(ax1, tstart, tstop, rinterval, sinterval, args,
                                recordingTimes, receiverPoints, sourcePoints)
-                previous_source(ax2, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer)
+                previous_source(ax2, args, rinterval, receiverPoints, sourcePoints, scatterer)
             elif event.key == 'right' or event.key == 'up':
-                next_slice(ax1, tstart, tstop, rinterval, sinterval, args, tau,
+                next_slice(ax1, tstart, tstop, rinterval, sinterval, args,
                            recordingTimes, receiverPoints, sourcePoints)
-                next_source(ax2, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer)
+                next_source(ax2, args, rinterval, receiverPoints, sourcePoints, scatterer)
         else:
             fig = event.canvas.figure
             ax = fig.axes[0]
             if event.key == 'left' or event.key == 'down':
-                previous_slice(ax, tstart, tstop, rinterval, sinterval, args, tau,
+                previous_slice(ax, tstart, tstop, rinterval, sinterval, args,
                                recordingTimes, receiverPoints, sourcePoints)
             elif event.key == 'right' or event.key == 'up':
-                next_slice(ax, tstart, tstop, rinterval, sinterval, args, tau,
+                next_slice(ax, tstart, tstop, rinterval, sinterval, args,
                            recordingTimes, receiverPoints, sourcePoints)
         fig.canvas.draw()
     #==============================================================================    
-    def previous_slice(ax, tstart, tstop, rinterval, sinterval, args, tau,
+    def previous_slice(ax, tstart, tstop, rinterval, sinterval, args,
                        recordingTimes, receiverPoints, sourcePoints):
         volume = ax.volume
         ax.index = (ax.index - 1) % volume.shape[2]  # wrap around using %
         wiggle_plot(ax, volume[:, :, ax.index], tstart, tstop, rinterval, sinterval,
-                    args, tau, recordingTimes, receiverPoints, sourcePoints)
+                    args, recordingTimes, receiverPoints, sourcePoints)
     
-    def next_slice(ax, tstart, tstop, rinterval, sinterval, args, tau,
+    def next_slice(ax, tstart, tstop, rinterval, sinterval, args,
                    recordingTimes, receiverPoints, sourcePoints):
         volume = ax.volume
         ax.index = (ax.index + 1) % volume.shape[2]
         wiggle_plot(ax, volume[:, :, ax.index], tstart, tstop, rinterval, sinterval,
-                    args, tau, recordingTimes, receiverPoints, sourcePoints)
+                    args, recordingTimes, receiverPoints, sourcePoints)
         
-    def wiggle_plot(ax, X, tstart, tstop, rinterval, sinterval, args, tau,
+    def wiggle_plot(ax, X, tstart, tstop, rinterval, sinterval, args,
                     recordingTimes, receiverPoints, sourcePoints):
         ax.clear()
         Nr, Nt = X.shape
@@ -335,96 +216,96 @@ def cli():
                     if au != '' and xu != '' and yu != '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f %s, %0.2f %s)]'''
                                       %(au, pltrstart,
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu))
                     elif au == '' and xu != '' and yu != '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f %s, %0.2f %s)]'''
                                       %(pltrstart,
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu))
                     elif au != '' and xu == '' and yu == '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f, %0.2f)]'''
                                       %(au, pltrstart,
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1]))
                     elif au == '' and xu == '' and yu == '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f, %0.2f)]'''
                                       %(pltrstart,
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1]))
                 else: #args.type == 'data'
                     if au != '' and xu != '' and yu != '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f %s, %0.2f %s)]'''
-                                      %(au, rinterval[0],
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu))
+                                      %(au, rstart,
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu))
                     elif au == '' and xu != '' and yu != '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f %s, %0.2f %s)]'''
-                                      %(rinterval[0],
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu))
+                                      %(rstart,
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu))
                     elif au != '' and xu == '' and yu == '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f, %0.2f)]'''
-                                      %(au, rinterval[0],
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1]))
+                                      %(au, rstart,
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1]))
                     elif au == '' and xu == '' and yu == '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f, %0.2f)]'''
-                                      %(rinterval[0],
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1]))
+                                      %(rstart,
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1]))
             
             elif receiverPoints.shape[1] == 3:
                 if args.type == 'testfunc':
                     if au != '' and xu != '' and yu != '' and zu != '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
                                       %(au, pltrstart,
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu,
-                                        receiverPoints[rinterval[0], 2], zu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu,
+                                        receiverPoints[0, 2], zu))
                     elif au == '' and xu != '' and yu != '' and zu != '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
                                       %(pltrstart,
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu,
-                                        receiverPoints[rinterval[0], 2], zu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu,
+                                        receiverPoints[0, 2], zu))
                     elif au != '' and xu == '' and yu == '' and zu == '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f, %0.2f, %0.2f)]'''
                                       %(au, pltrstart,
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1],
-                                        receiverPoints[rinterval[0], 2]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1],
+                                        receiverPoints[0, 2]))
                     elif au == '' and xu == '' and yu == '' and zu == '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f, %0.2f, %0.2f)]'''
                                       %(pltrstart,
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1],
-                                        receiverPoints[rinterval[0], 2]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1],
+                                        receiverPoints[0, 2]))
                 else: #args.type == 'data'
                     if au != '' and xu != '' and yu != '' and zu != '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
                                       %(au, rinterval[0],
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu,
-                                        receiverPoints[rinterval[0], 2], zu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu,
+                                        receiverPoints[0, 2], zu))
                     elif au == '' and xu != '' and yu != '' and zu != '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
                                       %(rinterval[0],
-                                        receiverPoints[rinterval[0], 0], xu,
-                                        receiverPoints[rinterval[0], 1], yu,
-                                        receiverPoints[rinterval[0], 2], zu))
+                                        receiverPoints[0, 0], xu,
+                                        receiverPoints[0, 1], yu,
+                                        receiverPoints[0, 2], zu))
                     elif au != '' and xu == '' and yu == '' and zu == '':
                         ax.set_ylabel('''Amplitude (%s) [Receiver %s @ (%0.2f, %0.2f, %0.2f)]'''
                                       %(au, rinterval[0],
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1],
-                                        receiverPoints[rinterval[0], 2]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1],
+                                        receiverPoints[0, 2]))
                     elif au == '' and xu == '' and yu == '' and zu == '':
                         ax.set_ylabel('''Amplitude [Receiver %s @ (%0.2f, %0.2f, %0.2f)]'''
                                       %(rinterval[0],
-                                        receiverPoints[rinterval[0], 0],
-                                        receiverPoints[rinterval[0], 1],
-                                        receiverPoints[rinterval[0], 2]))
+                                        receiverPoints[0, 0],
+                                        receiverPoints[0, 1],
+                                        receiverPoints[0, 2]))
                        
             ax.plot(time, X[0, :], 'darkgray')
             ax.fill_between(time, 0, X[0, :], where=(X[0, :] > 0), color='m')
@@ -436,98 +317,50 @@ def cli():
                 if  xu != '' and yu != '':
                     ax.set_title('''Scattered Wave [Source %s @ (%0.2f %s, %0.2f %s)]'''
                                  %(sinterval[ax.index],
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu))
+                                   sourcePoints[ax.index, 0], xu,
+                                   sourcePoints[ax.index, 1], yu))
                 else:
                     ax.set_title('''Scattered Wave [Source %s @ (%0.2f, %0.2f)]'''
                                  %(sinterval[ax.index],
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1]))
+                                   sourcePoints[ax.index, 0],
+                                   sourcePoints[ax.index, 1]))
                 
-            elif args.type == 'testfunc' and TFType == 'telsm':
+            elif args.type == 'testfunc':
                 if xu != '' and yu != '':
                     ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f %s, %0.2f %s)]'''
-                                 %(sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu))
+                                 %(sourcePoints[ax.index, 0], xu,
+                                   sourcePoints[ax.index, 1], yu))
                 elif xu == '' and yu == '':
                     ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f, %0.2f)]'''
-                                 %(sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1]))
-            
-            elif args.type == 'testfunc' and TFType == 'lsm':
-                if tu != '' and xu != '' and yu != '':
-                    ax.set_title('''Test Function [$\\tau$ = %s %s, $\\bf{z}$ @ (%0.2f %s, %0.2f %s)]'''
-                                 %(tau, tu,
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu))
-                elif tu != '' and xu == '' and yu == '':
-                    ax.set_title('''Test Function [$\\tau$ = %s %s, $\\bf{z}$ @ (%0.2f, %0.2f)]'''
-                                 %(tau, tu,
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1]))
-                elif tu == '' and xu != '' and yu != '':
-                    ax.set_title('''Test Function [$\\tau$ = %s, $\\bf{z}$ @ (%0.2f %s, %0.2f %s)]'''
-                                 %(tau,
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu))
-                elif tu == '' and xu == '' and yu == '':
-                    ax.set_title('''Test Function [$\\tau$ = %s, $\\bf{z}$ @ (%0.2f, %0.2f)]'''
-                                 %(tau,
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1]))
+                                 %(sourcePoints[ax.index, 0],
+                                   sourcePoints[ax.index, 1]))
                     
         elif sourcePoints.shape[1] == 3:
             if args.type == 'data':
                 if  xu != '' and yu != '' and zu != '':
                     ax.set_title('''Scattered Wave [Source %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
                                  %(sinterval[ax.index],
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu,
-                                   sourcePoints[sinterval[ax.index], 2], zu))
+                                   sourcePoints[ax.index, 0], xu,
+                                   sourcePoints[ax.index, 1], yu,
+                                   sourcePoints[ax.index, 2], zu))
                 else:
                     ax.set_title('''Scattered Wave [Source %s @ (%0.2f, %0.2f, %0.2f)]'''
                                  %(sinterval[ax.index],
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1],
-                                   sourcePoints[sinterval[ax.index], 2]))
+                                   sourcePoints[ax.index, 0],
+                                   sourcePoints[ax.index, 1],
+                                   sourcePoints[ax.index, 2]))
                 
-            elif args.type == 'testfunc' and TFType == 'telsm':
+            elif args.type == 'testfunc':
                 if xu != '' and yu != '' and zu != '':
                     ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
-                                 %(sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu,
-                                   sourcePoints[sinterval[ax.index], 2], zu))
+                                 %(sourcePoints[ax.index, 0], xu,
+                                   sourcePoints[ax.index, 1], yu,
+                                   sourcePoints[ax.index, 2], zu))
                 elif xu == '' and yu == '' and zu == '':
                     ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f, %0.2f, %0.2f)]'''
-                                 %(sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1],
-                                   sourcePoints[sinterval[ax.index], 2]))
-                    
-            elif args.type == 'testfunc' and TFType == 'lsm':
-                if tu != '' and xu != '' and yu != '' and zu != '':
-                    ax.set_title('''Test Function [$\\tau$ = %s %s, $\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
-                                 %(tau, tu,
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu,
-                                   sourcePoints[sinterval[ax.index], 2], zu))
-                elif tu != '' and xu == '' and yu == '' and zu == '':
-                    ax.set_title('''Test Function [$\\tau$ = %s %s, $\\bf{z}$ @ (%0.2f, %0.2f, %0.2f)]'''
-                                 %(tau, tu,
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1],
-                                   sourcePoints[sinterval[ax.index], 2]))
-                elif tu == '' and xu != '' and yu != '' and zu != '':
-                    ax.set_title('''Test Function [$\\tau$ = %s, $\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
-                                 %(tau,
-                                   sourcePoints[sinterval[ax.index], 0], xu,
-                                   sourcePoints[sinterval[ax.index], 1], yu,
-                                   sourcePoints[sinterval[ax.index], 2], zu))
-                elif tu == '' and xu == '' and yu == '' and zu == '':
-                    ax.set_title('''Test Function [$\\tau$ = %s, $\\bf{z}$ @ (%0.2f, %0.2f, %0.2f)]'''
-                                 %(tau,
-                                   sourcePoints[sinterval[ax.index], 0],
-                                   sourcePoints[sinterval[ax.index], 1],
-                                   sourcePoints[sinterval[ax.index], 2]))
+                                 %(sourcePoints[ax.index, 0],
+                                   sourcePoints[ax.index, 1],
+                                   sourcePoints[ax.index, 2]))
                        
         if tu != '':
             ax.set_xlabel('Time (%s)' %(tu))
@@ -540,29 +373,26 @@ def cli():
         
         return ax
     #==============================================================================
-    def previous_source(ax, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer):
-        ax.index = (ax.index - 1) % sourcePoints[sinterval].shape[0]  # wrap around using %
-        map_plot(ax, ax.index, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer)
+    def previous_source(ax, args, rinterval, receiverPoints, sourcePoints, scatterer):
+        ax.index = (ax.index - 1) % sourcePoints.shape[0]  # wrap around using %
+        map_plot(ax, ax.index, args, rinterval, receiverPoints, sourcePoints, scatterer)
     
-    def next_source(ax, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer):
-        ax.index = (ax.index + 1) % sourcePoints[sinterval].shape[0]  # wrap around using %
-        map_plot(ax, ax.index, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer)
+    def next_source(ax, args, rinterval, receiverPoints, sourcePoints, scatterer):
+        ax.index = (ax.index + 1) % sourcePoints.shape[0]  # wrap around using %
+        map_plot(ax, ax.index, args, rinterval, receiverPoints, sourcePoints, scatterer)
         
-    def map_plot(ax, index, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer):
+    def map_plot(ax, index, args, rinterval, receiverPoints, sourcePoints, scatterer):
         ax.clear()
         
-        # delete the row corresponding to the current source (plot current source separately)        
-        sources = sourcePoints[sinterval, :]
-        sources = np.delete(sources, index, axis=0)
-        currentSource = sourcePoints[sinterval[index], :]
+        # delete the row corresponding to the current source (plot current source separately)
+        sources = np.delete(sourcePoints, index, axis=0)
+        currentSource = sourcePoints[index, :]
         if receiverPoints.shape[1] == 2:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color='k')
             if args.type == 'data':
-                ax.plot(receiverPoints[rinterval, 0], receiverPoints[rinterval, 1], 'v', color='k')
                 ax.plot(sources[:, 0], sources[:, 1], '*', color='silver')
                 ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color='darkcyan')
             elif args.type == 'testfunc':
-                ax.plot(receiverPoints[rinterval + pltrstart, 0],
-                        receiverPoints[rinterval + pltrstart, 1], 'v', color='k')
                 ax.plot(sources[:, 0], sources[:, 1], '.', color='silver')
                 ax.plot(currentSource[0], currentSource[1], marker='.', markersize=12, color='darkcyan')
             if scatterer is not None and showScatterer:
@@ -579,14 +409,11 @@ def cli():
                 ax.set_ylabel(ylabel)
                 
         elif receiverPoints.shape[1] == 3:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color='k')
             if args.type == 'data':
-                ax.plot(receiverPoints[rinterval, 0], receiverPoints[rinterval, 1], receiverPoints[rinterval, 2], 'v', color='k')
                 ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color='silver')
                 ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color='darkcyan')
             elif args.type == 'testfunc':
-                ax.plot(receiverPoints[rinterval + pltrstart, 0],
-                        receiverPoints[rinterval + pltrstart, 1],
-                        receiverPoints[rinterval + pltrstart, 2], 'v', color='k')
                 ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '.', color='silver')
                 ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='.', markersize=12, color='darkcyan')
             if scatterer is not None and showScatterer:
@@ -618,16 +445,46 @@ def cli():
         
         return ax
     #==============================================================================
+    datadir = np.load('datadir.npz')
+    recordingTimes = np.load(str(datadir['recordingTimes']))
+    receiverPoints = np.load(str(datadir['receivers']))
+    if 'scatterer' in datadir:
+        scatterer = np.load(str(datadir['scatterer']))
+    else:
+        scatterer = None
+        
+    if args.type == 'data':
+        # load the 3D data array into variable 'X'
+        # X[receiver, time, source]
+        X = np.load(str(datadir['scatteredData']))
+        time = recordingTimes
+        sourcePoints = np.load(str(datadir['sources']))
+        
+    elif args.type == 'testfunc':
+        testFuncs = np.load('VZTestFuncsTELSM.npz')
+        TFarray = testFuncs['TFarray']
+        X = TFarray[:, :, :, 0]
+        time = testFuncs['time'] 
+        samplingPoints = testFuncs['samplingPoints']
+        # Extract all but last column of sampling points,
+        # which corresponds to sampling points in time
+        sourcePoints = samplingPoints[:, :-1]
+        
     if Path('window.npz').exists():
         windowDict = np.load('window.npz')
         tstart = windowDict['tstart']
         tstop = windowDict['tstop']
         
+        # Set the receiver window for receiverPoints
+        rstart = windowDict['rstart']
+        rstop = windowDict['rstop']
+        rstep = windowDict['rstep']
+        
         if args.type == 'data':
-            # Set the receiver window
-            rstart = windowDict['rstart']
-            rstop = windowDict['rstop']
-            rstep = windowDict['rstep']
+            # Window the receiver axis in the data volume X
+            Xrstart = rstart
+            Xrstop = rstop
+            Xrstep = rstep
             
             # Set the source window
             sstart = windowDict['sstart']
@@ -635,14 +492,14 @@ def cli():
             sstep = windowDict['sstep']
             
         elif args.type == 'testfunc':
-            # Set the receiver window
-            rstart = 0
-            rstop = X.shape[0]
-            rstep = 1
+            # Window the receiver axis in the data volume X
+            Xrstart = 0
+            Xrstop = X.shape[0]
+            Xrstep = 1
             
             # pltrstart is used to plot the correct receivers for
             # the simulated test function computed by Vezda
-            pltrstart = windowDict['rstart']
+            pltrstart = rstart
             
             # Set the source window
             sstart = 0
@@ -654,17 +511,26 @@ def cli():
         tstop = recordingTimes[-1]
         
         rstart = 0
-        pltrstart = rstart
         rstop = X.shape[0]
         rstep = 1
+        
+        Xrstart = rstart
+        pltrstart = rstart
+        Xrstop = rstop
+        Xrstep = rstep
         
         sstart = 0
         sstop = X.shape[2]
         sstep = 1
         
     rinterval = np.arange(rstart, rstop, rstep)
+    receiverPoints = receiverPoints[rinterval, :]
+    
     sinterval = np.arange(sstart, sstop, sstep)
-    X = X[rinterval, :, :]
+    sourcePoints = sourcePoints[sinterval, :]
+    
+    Xrinterval = np.arange(Xrstart, Xrstop, Xrstep)
+    X = X[Xrinterval, :, :]
     X = X[:, :, sinterval]
     Ns = X.shape[2]
     
@@ -674,7 +540,7 @@ def cli():
         ax1 = fig.add_subplot(121)
         ax1.volume = X
         ax1.index = Ns // 2
-        wiggle_plot(ax1, X[:, :, ax1.index], tstart, tstop, rinterval, sinterval, args, tau,
+        wiggle_plot(ax1, X[:, :, ax1.index], tstart, tstop, rinterval, sinterval, args,
                     recordingTimes, receiverPoints, sourcePoints)
         
         if receiverPoints.shape[1] == 2:
@@ -683,22 +549,22 @@ def cli():
             ax2 = fig.add_subplot(122, projection='3d')   
         
         ax2.index = ax1.index
-        map_plot(ax2, ax2.index, args, rinterval, sinterval, receiverPoints, sourcePoints, scatterer)
+        map_plot(ax2, ax2.index, args, rinterval, receiverPoints, sourcePoints, scatterer)
         plt.tight_layout()
         fig.canvas.mpl_connect('key_press_event', lambda event: process_key(event, tstart, tstop, rinterval, sinterval, 
                                                                        receiverPoints, sourcePoints, scatterer,
-                                                                       args, tau, recordingTimes))
+                                                                       args, recordingTimes))
     
     else:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.volume = X
         ax.index = Ns // 2
-        wiggle_plot(ax, X[:, :, ax.index], tstart, tstop, rinterval, sinterval, args, tau,
+        wiggle_plot(ax, X[:, :, ax.index], tstart, tstop, rinterval, sinterval, args,
                     recordingTimes, receiverPoints, sourcePoints)
         plt.tight_layout()
         fig.canvas.mpl_connect('key_press_event', lambda event: process_key(event, tstart, tstop, rinterval, sinterval, 
                                                                        receiverPoints, sourcePoints, scatterer,
-                                                                       args, tau, recordingTimes))
+                                                                       args, recordingTimes))
     
     plt.show()

@@ -30,6 +30,15 @@ sys.path.append(os.getcwd())
 import pulseFun
 
 #==============================================================================
+# Used to convert elapsed time (in seconds) to 
+# human-readable format (hours : minutes : seconds)
+def humanReadable(seconds):
+    h = int(seconds / 3600)
+    m = int((seconds % 3600) / 60)
+    s = seconds % 60.0
+    return '{}h : {:>02}m : {:>05.2f}s'.format(h, m, s)
+
+#==============================================================================
 def isValid(numVals):
     validType = False
     while validType == False:
@@ -540,7 +549,7 @@ def cli():
         startTime = time.time()
         s, W = eigsh(A, k, which='LA')
         endTime = time.time()
-        print('Elapsed time:', endTime - startTime, 'seconds')
+        print('Elapsed time:', humanReadable(endTime - startTime), '\n')
         
         # sort the eigenvalues and corresponding eigenvectors in descending order
         # (i.e., largest to smallest)
