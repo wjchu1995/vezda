@@ -38,11 +38,16 @@ $ vzhome
 ```
 which gives the output:
 ```
+
+Vezda, Version <number>
+Copyright © 2017-2018 Aaron C. Prunty
+Distributed under the terms of the Apache License, Version 2.0
+
+Install location:
+
 /path/to/your/python/site-packages/vezda
-```
-You can easily move to this folder be entering:
-```
-$ cd `vzhome`
+
+
 ```
 
 #### Option 2: Install from source files

@@ -33,7 +33,7 @@ def cli():
     parser.add_argument('--format', '-f', type=str, default='pdf', choices=['png', 'pdf', 'ps', 'eps', 'svg'],
                         help='''Specify the image format of the saved file. Accepted formats are png, pdf,
                         ps, eps, and svg. Default format is set to pdf.''')
-    parser.add_argument('--map', type=str, default='no', choices=['n', 'no', 'false', 'y', 'yes', 'true'],
+    parser.add_argument('--map', action='store_true',
                         help='''Plot a map of the receiver and source/sampling point locations. The current
                         source/sampling point will be highlighted. The boundary of the scatterer will also
                         be shown if available.''')
@@ -122,14 +122,6 @@ def cli():
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
         
     #==============================================================================
-        
-    if args.map == 'n' or args.map == 'no' or args.map == 'false':
-        showMap = False
-    
-    elif args.map == 'y' or args.map == 'yes' or args.map == 'true':
-        showMap = True
-        
-    #==============================================================================
     def remove_keymap_conflicts(new_keys_set):
         for prop in plt.rcParams:
             if prop.startswith('keymap.'):
@@ -149,7 +141,7 @@ def cli():
     def process_key(event, tstart, tstop, rinterval, sinterval,
                     receiverPoints, sourcePoints, scatterer,
                     args, recordingTimes):
-        if showMap:
+        if args.map:
             fig = event.canvas.figure
             ax1 = fig.axes[0]
             ax2 = fig.axes[1]
@@ -461,7 +453,7 @@ def cli():
         sourcePoints = np.load(str(datadir['sources']))
         
     elif args.type == 'testfunc':
-        testFuncs = np.load('VZTestFuncsTELSM.npz')
+        testFuncs = np.load('VZTestFuncs.npz')
         TFarray = testFuncs['TFarray']
         X = TFarray[:, :, :, 0]
         time = testFuncs['time'] 
@@ -535,7 +527,7 @@ def cli():
     Ns = X.shape[2]
     
     remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
-    if showMap:
+    if args.map:
         fig = plt.figure(figsize=plt.figaspect(0.48))
         ax1 = fig.add_subplot(121)
         ax1.volume = X

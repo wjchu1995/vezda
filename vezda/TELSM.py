@@ -181,15 +181,15 @@ def solver(medium, alpha):
             pulse = lambda t : pulseFun.pulse(t)
             
             # Previously computed test functions and parameters from pulseFun module
-            # are stored in 'VZTestFuncsTELSM.npz'. If the current space-time sampling grid
+            # are stored in 'VZTestFuncs.npz'. If the current space-time sampling grid
             # and pulseFun module parameters are consistent with those stored in
-            # 'VZTestFuncsTELSM.npz', then Vezda will load the previously computed test
+            # 'VZTestFuncs.npz', then Vezda will load the previously computed test
             # functions. Otherwise, Vezda will recompute the test functions. This reduces
             # computational cost by only computing test functions when necessary.
-            if Path('VZTestFuncsTELSM.npz').exists():
+            if Path('VZTestFuncs.npz').exists():
                 print('\nDetected that free-space test functions have already been computed...')
                 print('Checking consistency with current space-time sampling grid and pulse function...')
-                TFDict = np.load('VZTestFuncsTELSM.npz')
+                TFDict = np.load('VZTestFuncs.npz')
                 
                 if np.array_equal(TFDict['x'], x) and np.array_equal(TFDict['y'], y) and np.array_equal(TFDict['tau'], tau):
                     print('Space-time sampling grid is consistent...')
@@ -218,7 +218,7 @@ def solver(medium, alpha):
                                     l += 1
                                     sleep(0.001)
                         
-                        np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, tau=tau, samplingPoints=samplingPoints)
                     
@@ -240,7 +240,7 @@ def solver(medium, alpha):
                                     l += 1
                                     sleep(0.001)
                         
-                        np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, tau=tau, samplingPoints=samplingPoints)
                 
@@ -263,7 +263,7 @@ def solver(medium, alpha):
                                 l += 1
                                 sleep(0.001)
                     
-                    np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, tau=tau, samplingPoints=samplingPoints)
                 
@@ -285,7 +285,7 @@ def solver(medium, alpha):
                             l += 1
                             sleep(0.001)
                     
-                np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
@@ -578,7 +578,7 @@ def solver(medium, alpha):
                          Enter 'q/quit' to abort the calculation.
                          '''))
                         
-            np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
@@ -616,16 +616,16 @@ def solver(medium, alpha):
             pulse = lambda t : pulseFun.pulse(t)
             
             # Previously computed test functions and parameters from pulseFun module
-            # are stored in 'VZTestFuncsTELSM.npz'. If the current space-time sampling grid
+            # are stored in 'VZTestFuncs.npz'. If the current space-time sampling grid
             # and pulseFun module parameters are consistent with those stored in
-            # 'VZTestFuncsTELSM.npz', then Vezda will load the previously computed test
+            # 'VZTestFuncs.npz', then Vezda will load the previously computed test
             # functions. Otherwise, Vezda will recompute the test functions. This reduces
             # computational cost by only computing test functions when necessary.
             
-            if Path('VZTestFuncsTELSM.npz').exists():
+            if Path('VZTestFuncs.npz').exists():
                 print('\nDetected that free-space test functions have already been computed...')
                 print('Checking consistency with current space-time sampling grid and pulse function...')
-                TFDict = np.load('VZTestFuncsTELSM.npz')
+                TFDict = np.load('VZTestFuncs.npz')
                 
                 if np.array_equal(TFDict['x'], x) and np.array_equal(TFDict['y'], y) and np.array_equal(TFDict['z'], z) and np.array_equal(TFDict['tau'], tau):
                     print('Space-time sampling grid is consistent...')
@@ -655,7 +655,7 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                         
-                        np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
                     
@@ -678,7 +678,7 @@ def solver(medium, alpha):
                                         l += 1
                                         sleep(0.001)
                         
-                        np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
                 
@@ -702,7 +702,7 @@ def solver(medium, alpha):
                                     l += 1
                                     sleep(0.001)
                         
-                    np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
                 
@@ -725,7 +725,7 @@ def solver(medium, alpha):
                                 l += 1
                                 sleep(0.001)
                         
-                np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
             
@@ -1375,7 +1375,7 @@ def solver(medium, alpha):
                          Enter 'q/quit' to abort the calculation.
                          '''))
                         
-            np.savez('VZTestFuncsTELSM.npz', TFarray=TFarray, time=recordingTimes,
+            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
         
