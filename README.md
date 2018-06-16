@@ -38,7 +38,6 @@ $ vzhome
 ```
 which gives the output:
 ```
-
 Vezda, Version <number>
 Copyright © 2017-2018 Aaron C. Prunty
 Distributed under the terms of the Apache License, Version 2.0
@@ -46,8 +45,6 @@ Distributed under the terms of the Apache License, Version 2.0
 Install location:
 
 /path/to/your/python/site-packages/vezda
-
-
 ```
 
 #### Option 2: Install from source files
