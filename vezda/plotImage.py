@@ -53,6 +53,8 @@ def cli():
                         help='Specify the units for the y-axis (e.g., \'m\' or \'km\').')
     parser.add_argument('--zu', type=str, default=None,
                         help='Specify the units for the z-axis (e.g., \'m\' or \'km\').')
+    parser.add_argument('--colormap', type=str, default=None, choices=['viridis', 'plasma', 'inferno', 'magma', 'cividis'],
+                        help='specify a perceptually uniform sequential colormap. Default is \'magma\'')
     parser.add_argument('--colorbar', type=str, default=None, choices=['n', 'no', 'false', 'y', 'yes', 'true'],
                         help='specify \'y/yes/true\' to plot colorbar. Default is \'n/no/false\'')
     parser.add_argument('--invert_xaxis', type=str, default=None, choices=['n', 'no', 'false', 'y', 'yes', 'true'],
@@ -162,87 +164,80 @@ def cli():
             yu = plotParams['yu']
             zu = plotParams['zu']
         #==============================================================================    
+        if args.colormap is not None:
+            colormap = plt.get_cmap(args.colormap)
+            plotParams['colormap'] = args.colormap
+        else:
+            cmap = plotParams['colormap']
+            colormap = plt.get_cmap(cmap)
+        #==============================================================================
         if args.colorbar is not None:
             if args.colorbar == 'n' or args.colorbar == 'no' or args.colorbar == 'false':
                 wantColorbar = False
-                if plotParams['colorbar'] is True:
-                    plotParams['colorbar'] = False
+                plotParams['colorbar'] = False
             elif args.colorbar == 'y' or args.colorbar == 'yes' or args.colorbar == 'true':
                 wantColorbar = True
-                if plotParams['colorbar'] is False:
-                    plotParams['colorbar'] = True
+                plotParams['colorbar'] = True
         else:
             wantColorbar = plotParams['colorbar']
         #==============================================================================    
         if args.invert_xaxis is not None:
             if args.invert_xaxis == 'n' or args.invert_xaxis == 'no' or args.invert_xaxis == 'false':
                 invertX = False
-                if plotParams['invert_xaxis'] is True:
-                    plotParams['invert_xaxis'] = False
+                plotParams['invert_xaxis'] = False
             elif args.invert_xaxis == 'y' or args.invert_xaxis == 'yes' or args.invert_xaxis == 'true':
                 invertX = True
-                if plotParams['invert_xaxis'] is False:
-                    plotParams['invert_xaxis'] = True
+                plotParams['invert_xaxis'] = True
         else:
             invertX = plotParams['invert_xaxis']
         #==============================================================================
         if args.invert_yaxis is not None:
             if args.invert_yaxis == 'n' or args.invert_yaxis == 'no' or args.invert_yaxis == 'false':
                 invertY = False
-                if plotParams['invert_yaxis'] is True:
-                    plotParams['invert_yaxis'] = False
+                plotParams['invert_yaxis'] = False
             elif args.invert_yaxis == 'y' or args.invert_yaxis == 'yes' or args.invert_yaxis == 'true':
                 invertY = True
-                if plotParams['invert_yaxis'] is False:
-                    plotParams['invert_yaxis'] = True
+                plotParams['invert_yaxis'] = True
         else:
             invertY = plotParams['invert_yaxis']
         #==============================================================================
         if args.invert_zaxis is not None:
             if args.invert_zaxis == 'n' or args.invert_zaxis == 'no' or args.invert_zaxis == 'false':
                 invertZ = False
-                if plotParams['invert_zaxis'] is True:
-                    plotParams['invert_zaxis'] = False
+                plotParams['invert_zaxis'] = False
             elif args.invert_zaxis == 'y' or args.invert_zaxis == 'yes' or args.invert_zaxis == 'true':
                 invertZ = True
-                if plotParams['invert_zaxis'] is False:
-                    plotParams['invert_zaxis'] = True
+                plotParams['invert_zaxis'] = True
         else:
             invertZ = plotParams['invert_zaxis']
         #==============================================================================
         if args.show_scatterer is not None:
             if args.show_scatterer == 'n' or args.show_scatterer == 'no' or args.show_scatterer == 'false':
                 showScatterer = False
-                if plotParams['show_scatterer'] is True:
-                    plotParams['show_scatterer'] = False
+                plotParams['show_scatterer'] = False
             elif args.show_scatterer == 'y' or args.show_scatterer == 'yes' or args.show_scatterer == 'true':
                 showScatterer = True
-                if plotParams['show_scatterer'] is False:
-                    plotParams['show_scatterer'] = True
+                plotParams['show_scatterer'] = True
         else:
             showScatterer = plotParams['show_scatterer']
         #==============================================================================
         if args.show_sources is not None:
             if args.show_sources == 'n' or args.show_sources == 'no' or args.show_sources == 'false':
                 showSources = False
-                if plotParams['show_sources'] is True:
-                    plotParams['show_sources'] = False
+                plotParams['show_sources'] = False
             elif args.show_sources == 'y' or args.show_sources == 'yes' or args.show_sources == 'true':
                 showSources = True
-                if plotParams['show_sources'] is False:
-                    plotParams['show_sources'] = True
+                plotParams['show_sources'] = True
         else:
             showSources = plotParams['show_sources']
         #==============================================================================
         if args.show_receivers is not None:
             if args.show_receivers == 'n' or args.show_receivers == 'no' or args.show_receivers == 'false':
                 showReceivers = False
-                if plotParams['show_receivers'] is True:
-                    plotParams['show_receivers'] = False
+                plotParams['show_receivers'] = False
             elif args.show_receivers == 'y' or args.show_receivers == 'yes' or args.show_receivers == 'true':
                 showReceivers = True
-                if plotParams['show_receivers'] is False:
-                    plotParams['show_receivers'] = True
+                plotParams['show_receivers'] = True
         else:
             showReceivers = plotParams['show_receivers']
         #==============================================================================
@@ -266,6 +261,13 @@ def cli():
             isolevel = args.isolevel
         plotParams['isolevel'] = isolevel
         
+        if args.colormap is not None:
+            colormap = plt.get_cmap(args.colormap)
+            plotParams['colormap'] = args.colormap
+        else:
+            colormap = plt.cm.magma
+            plotParams['colormap'] = 'magma'
+            
         if args.colorbar is not None:
             if args.colorbar == 'n' or args.colorbar == 'no' or args.colorbar == 'false':
                 wantColorbar = False
@@ -457,7 +459,7 @@ def cli():
         ax.clear()
         
         if ndspace == 2:
-            im = ax.contourf(X, Y, volume[:, :, ax.index], 100, cmap=plt.cm.magma)
+            im = ax.contourf(X, Y, volume[:, :, ax.index], 100, cmap=colormap)
             if wantColorbar:
                 divider = make_axes_locatable(ax)
                 cax = divider.append_axes('right', size='5%', pad=0.05)
@@ -579,7 +581,7 @@ def cli():
             
             fig1 = plt.figure()
             ax1 = fig1.add_subplot(111)
-            im = ax1.contourf(X, Y, Image, 100, cmap=plt.cm.magma)
+            im = ax1.contourf(X, Y, Image, 100, cmap=colormap)
             
             if wantColorbar:
                 divider = make_axes_locatable(ax1)
@@ -639,7 +641,7 @@ def cli():
             
             fig1 = plt.figure()
             ax1 = fig1.add_subplot(111)
-            im = ax1.contourf(X, Y, Image, 100, cmap=plt.cm.magma)
+            im = ax1.contourf(X, Y, Image, 100, cmap=colormap)
             
             if wantColorbar:
                 divider = make_axes_locatable(ax1)

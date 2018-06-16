@@ -94,6 +94,7 @@ def cli():
         plotParams['yu'] = yu
         zu = ''
         plotParams['zu'] = zu
+        plotParams['colormap'] = 'magma'
         plotParams['colorbar'] = False
         invertX = False
         plotParams['invert_xaxis'] = invertX
