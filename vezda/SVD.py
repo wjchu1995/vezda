@@ -378,17 +378,17 @@ def cli():
             rstop = windowDict['rstop']
             rstep = windowDict['rstep']
             rinterval = np.arange(rstart, rstop, rstep)
-            print('window @ receivers : start = ', rstart)
-            print('window @ receivers : stop = ', rstop)
-            print('window @ receivers : step = ', rstep, '\n')
+            print('window @ receivers : start =', rstart)
+            print('window @ receivers : stop =', rstop)
+            print('window @ receivers : step =', rstep, '\n')
             
             # Apply the time window
             tstart = windowDict['tstart']
             tstop = windowDict['tstop']
             tstep = windowDict['tstep']
-            print('window @ time : start = ', tstart)
-            print('window @ time : stop = ', tstop)
-            print('window @ time : step = ', tstep, '\n')
+            print('window @ time : start =', tstart)
+            print('window @ time : stop =', tstop)
+            print('window @ time : step =', tstep, '\n')
             
             recordingTimes = np.load(str(datadir['recordingTimes']))
             dt = (recordingTimes[-1] - recordingTimes[0]) / (len(recordingTimes) - 1)
@@ -403,9 +403,9 @@ def cli():
             sstop = windowDict['sstop']
             sstep = windowDict['sstep']
             sinterval = np.arange(sstart, sstop, sstep)
-            print('window @ sources : start = ', sstart)
-            print('window @ sources : stop = ', sstop)
-            print('window @ sources : step = ', sstep, '\n')
+            print('window @ sources : start =', sstart)
+            print('window @ sources : stop =', sstop)
+            print('window @ sources : step =', sstep, '\n')
             
             print('Applying window to data volume...')
             scatteredData = scatteredData[rinterval, :, :]

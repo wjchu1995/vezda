@@ -31,8 +31,9 @@ def cli():
         if not Path('datadir.npz').exists():
             sys.exit(textwrap.dedent(
                     '''
-                    A directory containing the data files has not been specified. To specify
-                    a data directory, enter:
+                    A relative path to the data directory has not been specified for
+                    the current working directory. To specify a relative path to the
+                    data directory, enter:
                         
                         vzdata --path=<path/to/data/files>
                         
@@ -73,7 +74,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     receiverFile = input('Please specify the filename containing the receiver coordinates: ')
                     if '.npy' in receiverFile and Path(os.path.join(dataPath, receiverFile)).exists():
-                        receivers = os.path.abspath(receiverFile)
+                        receivers = os.path.join(dataPath, receiverFile)
                         userResponded = True
                         break
                     elif '.npy' in receiverFile and not Path(os.path.join(dataPath, receiverFile)).exists():
@@ -106,7 +107,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     sourceFile = input('Please specify the filename containing the source coordinates: ')
                     if '.npy' in sourceFile and Path(os.path.join(dataPath, sourceFile)).exists():
-                        sources = os.path.abspath(sourceFile)
+                        sources = os.path.join(dataPath, sourceFile)
                         userResponded = True
                         break
                     elif '.npy' in sourceFile and not Path(os.path.join(dataPath, sourceFile)).exists():
@@ -141,7 +142,7 @@ def cli():
                 if answer == 'y' or answer == 'yes':
                     scattererFile = input('Please specify the filename containing the scatterer coordinates: ')
                     if '.npy' in scattererFile and Path(os.path.join(dataPath, scattererFile)).exists():
-                        scatterer = os.path.abspath(scattererFile)
+                        scatterer = os.path.join(dataPath, scattererFile)
                         noScatterer = False
                         userResponded = True
                         break
@@ -180,7 +181,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     timeFile = input('Please specify the filename containing the recording times: ')
                     if '.npy' in timeFile and Path(os.path.join(dataPath, timeFile)).exists():
-                        recordingTimes = os.path.abspath(timeFile)
+                        recordingTimes = os.path.join(dataPath, timeFile)
                         userResponded = True
                         break
                     elif '.npy' in timeFile and not Path(os.path.join(dataPath, timeFile)).exists():
@@ -213,7 +214,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     dataFile = input('Please specify the filename containing the measured scattered waves: ')
                     if '.npy' in dataFile and Path(os.path.join(dataPath, dataFile)).exists():
-                        scatteredData = os.path.abspath(dataFile)
+                        scatteredData = os.path.join(dataPath, dataFile)
                         userResponded = True
                         break
                     elif '.npy' in dataFile and not Path(os.path.join(dataPath, dataFile)).exists():
@@ -248,7 +249,7 @@ def cli():
                 if answer == 'y' or answer == 'yes':
                     testFuncsFile = input('Please specify the filename containing the simulated test functions: ')
                     if '.npy' in testFuncsFile and Path(os.path.join(dataPath, testFuncsFile)).exists():
-                        testFuncs = os.path.abspath(testFuncsFile)
+                        testFuncs = os.path.join(dataPath, testFuncsFile)
                         noTestFuncs = False
                         userResponded = True
                         break
@@ -291,7 +292,7 @@ def cli():
                     if answer == '' or answer == 'y' or answer == 'yes':
                         samplingPointsFile = input('Please specify the filename containing the sampling points: ')
                         if '.npy' in samplingPointsFile and Path(os.path.join(dataPath, samplingPointsFile)).exists():
-                            samplingPoints = os.path.abspath(testFuncsFile)
+                            samplingPoints = os.path.join(dataPath, samplingPointsFile)
                             userResponded = True
                             break
                         elif '.npy' in samplingPointsFile and not Path(os.path.join(dataPath, samplingPointsFile)).exists():
@@ -304,7 +305,7 @@ def cli():
                         sys.exit('Exiting program.')
                     else:
                         print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
-    
+        
         #==============================================================================  
         if noScatterer and noTestFuncs:
             files = [receivers, sources, recordingTimes, scatteredData]
@@ -347,4 +348,4 @@ def cli():
                      recordingTimes = recordingTimes,
                      scatteredData = scatteredData,
                      testFuncs = testFuncs,
-                     psamplingPoints=samplingPoints)
+                     samplingPoints = samplingPoints)

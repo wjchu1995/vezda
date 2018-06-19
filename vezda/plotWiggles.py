@@ -13,7 +13,9 @@
 # limitations under the License.
 #==============================================================================
 
+import sys
 import argparse
+import textwrap
 import pickle
 import numpy as np
 import matplotlib
@@ -454,14 +456,65 @@ def cli():
         sourcePoints = np.load(str(datadir['sources']))
         
     elif args.type == 'testfunc':
-        testFuncs = np.load('VZTestFuncs.npz')
-        TFarray = testFuncs['TFarray']
-        X = TFarray[:, :, :, 0]
-        time = testFuncs['time'] 
-        samplingPoints = testFuncs['samplingPoints']
-        # Extract all but last column of sampling points,
-        # which corresponds to sampling points in time
-        sourcePoints = samplingPoints[:, :-1]
+        if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
+            TFtype = 'user'
+            X = np.load(str(datadir['testFuncs']))
+            time = recordingTimes
+            samplingPoints = np.load(str(datadir['samplingPoints']))
+            sourcePoints = samplingPoints[:, :-1]
+            
+        elif not 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
+            TFtype = 'vezda'
+            testFuncs = np.load('VZTestFuncs.npz')
+            TFarray = testFuncs['TFarray']
+            X = TFarray[:, :, :, 0]
+            time = testFuncs['time'] 
+            samplingPoints = testFuncs['samplingPoints']
+            # Extract all but last column of sampling points,
+            # which corresponds to sampling points in time
+            sourcePoints = samplingPoints[:, :-1]
+            
+        elif 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
+            userResponded = False
+            print(textwrap.dedent(
+                 '''
+                 Two files are available containing simulated test functions.
+                 
+                 Enter '1' to view the user-provided test functions. (Default)
+                 Enter '2' to view the test functions computed by Vezda.
+                 Enter 'q/quit' to exit.
+                 '''))
+            while userResponded == False:
+                answer = input('Action: ')
+                if answer == '' or answer == '1':
+                    TFtype = 'user'
+                    X = np.load(str(datadir['testFuncs']))
+                    time = recordingTimes
+                    samplingPoints = np.load(str(datadir['samplingPoints']))
+                    sourcePoints = samplingPoints[:, :-1]
+                    userResponded = True
+                    break
+                elif answer == '2':
+                    TFtype = 'vezda'
+                    testFuncs = np.load('VZTestFuncs.npz')
+                    TFarray = testFuncs['TFarray']
+                    X = TFarray[:, :, :, 0]
+                    time = testFuncs['time'] 
+                    samplingPoints = testFuncs['samplingPoints']
+                    # Extract all but last column of sampling points,
+                    # which corresponds to sampling points in time
+                    sourcePoints = samplingPoints[:, :-1]
+                    userResponded = True
+                elif answer == 'q' or answer == 'quit':
+                    sys.exit('Exiting program.')
+                else:
+                    print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
+        
+        else:
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: No test functions have been found to plot.
+                    '''))
         
     if Path('window.npz').exists():
         windowDict = np.load('window.npz')
@@ -485,10 +538,17 @@ def cli():
             sstep = windowDict['sstep']
             
         elif args.type == 'testfunc':
-            # Window the receiver axis in the data volume X
-            Xrstart = 0
-            Xrstop = X.shape[0]
-            Xrstep = 1
+            
+            if TFtype == 'user':
+                Xrstart = rstart
+                Xrstop = rstop
+                Xrstep = rstep
+                
+            elif TFtype == 'vezda':
+                # Window the receiver axis in the data volume X
+                Xrstart = 0
+                Xrstop = X.shape[0]
+                Xrstep = 1
             
             # pltrstart is used to plot the correct receivers for
             # the simulated test function computed by Vezda

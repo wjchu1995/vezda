@@ -150,7 +150,22 @@ def solver(medium, alpha):
                                   # so we never divide by zero)
     #==============================================================================
     # Load the user-specified space-time sampling grid
-    samplingGrid = np.load('samplingGrid.npz')
+    try:
+        samplingGrid = np.load('samplingGrid.npz')
+    except FileNotFoundError:
+        samplingGrid = None
+        
+    if samplingGrid is None:
+        sys.exit(textwrap.dedent(
+                '''
+                A space-time sampling grid needs to be set up before running the
+                \'vzsolve\' command. Enter:
+                    
+                    vzgrid --help
+                
+                from the command-line for more information on how to set up a
+                sampling grid.
+                '''))
     
     if int(samplingGrid['ndspace']) == 2:
         # Apply total-energy linear sampling method to three-dimensional space-time
@@ -373,22 +388,30 @@ def solver(medium, alpha):
                 # have 3 axes. A fourth axis will be added to accomodate for time shifts
                 # corresponding to different sampling points in time
                 tempTFarray = np.load(str(datadir['testFuncs']))
+            
+                # Apply the receiver window, if any
+                tempTFarray = tempTFarray[rinterval, :, :]
+            
+                # Add new axis to TFarray to accomodate time shifts
+                TFarray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
+                TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
+                
+                # Load the sampling points
+                samplingPoints = np.load(str(datadir['samplingPoints']))
+            
             else:
                 sys.exit(textwrap.dedent(
                         '''
                         FileNotFoundError: Attempted to load file containing test
                         functions, but no such file exists. If a file exists containing
-                        the test functions, run 'vzdata --path=<path/to/data/>' command 
+                        the test functions, run:
+                            
+                            'vzdata --path=<path/to/data/>'
+                        
                         and specify the file containing the test functions when prompted.
                         Otherwise, specify 'no' when asked if a file containing the test
                         functions exists.
                         '''))
-            # Apply the receiver window, if any
-            tempTFarray = tempTFarray[rinterval, :, :]
-            
-            # Add new axis to TFarray to accomodate time shifts
-            TFarray = np.zeros(Nr, Nt, Nx * Ny, Ntau)
-            TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
             
             userResponded = False
             print(textwrap.dedent(
@@ -409,7 +432,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iy in range(Ny):
@@ -491,7 +519,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for ix in range(Nx):
@@ -817,6 +850,17 @@ def solver(medium, alpha):
                 # have 3 axes. A fourth axis will be added to accomodate for time shifts
                 # corresponding to different sampling points in time
                 tempTFarray = np.load(str(datadir['testFuncs']))
+                
+                # Apply the receiver window, if any
+                tempTFarray = tempTFarray[rinterval, :, :]
+                
+                # Add new axis to TFarray to accomodate time shifts
+                TFarray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
+                TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
+                
+                # Load the sampling points
+                samplingPoints = np.load(str(datadir['samplingPoints']))
+            
             else:
                 sys.exit(textwrap.dedent(
                         '''
@@ -827,12 +871,6 @@ def solver(medium, alpha):
                         Otherwise, specify 'no' when asked if a file containing the test
                         functions exists.
                         '''))
-            # Apply the receiver window, if any
-            tempTFarray = tempTFarray[rinterval, :, :]
-            
-            # Add new axis to TFarray to accomodate time shifts
-            TFarray = np.zeros(Nr, Nt, Nx * Ny * Nz, Ntau)
-            TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
             
             userResponded = False
             print(textwrap.dedent(
@@ -857,7 +895,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iy in range(Ny):
@@ -942,7 +985,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iz in range(Nz):
@@ -1027,7 +1075,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for ix in range(Nx):
@@ -1112,7 +1165,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for iz in range(Nz):
@@ -1197,7 +1255,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for iz in trange(Nz, desc='Solving system'):
                             for ix in range(Nx):
@@ -1282,7 +1345,12 @@ def solver(medium, alpha):
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        TF = TFarray[:, :, :, 0]
+                        if tau[0] != 0:
+                            TF = timeShift(tempTFarray, tau[0], dt)
+                            TF = TF[:, tinterval, :]
+                            TFarray[:, :, :, 0] = TF
+                        else:
+                            TF = TFarray[:, :, :, 0]
                         l = 0 # counter for spatial sampling points
                         for iz in trange(Nz, desc='Solving system'):
                             for iy in range(Ny):
