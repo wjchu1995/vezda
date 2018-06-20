@@ -214,31 +214,32 @@ def solver(medium, alpha):
                             print('Recording time interval is consistent...')
                             print('Moving forward to imaging algorithm...')
                             TFarray = TFDict['TFarray']
+                            
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            print('Recomputing test functions...')
+                            samplingPoints = np.zeros((Nx * Ny * Ntau, 3))
+                            TFarray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
+                            
+                            k = 0 # counter for space-time sampling points
+                            for it in trange(Ntau, desc='Sampling time'):
+                                l = 0 # counter for spatial sampling points
+                                for ix in trange(Nx, desc='Sampling space', leave=False):
+                                    for iy in range(Ny):
+                                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], tau[it]])
+                                        TFarray[:, :, l, it] = FundSol(pulse, recordingTimes - tau[it],
+                                               velocity, receiverPoints, samplingPoints[k, :2])
+                                        k += 1
+                                        l += 1
+                                        sleep(0.001)
                         
-                    elif TFDict['peakFreq'] != peakFreq or TFDict['peakTime'] != peakTime or TFDict['velocity'] != velocity:
+                            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                     x=x, y=y, tau=tau, samplingPoints=samplingPoints)
+                            
+                        
+                    else:
                         print('Current pulse function is inconsistent...')
-                        print('Recomputing test functions...')
-                        samplingPoints = np.zeros((Nx * Ny * Ntau, 3))
-                        TFarray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
-                        
-                        k = 0 # counter for space-time sampling points
-                        for it in trange(Ntau, desc='Sampling time'):
-                            l = 0 # counter for spatial sampling points
-                            for ix in trange(Nx, desc='Sampling space', leave=False):
-                                for iy in range(Ny):
-                                    samplingPoints[k, :] = np.asarray([x[ix], y[iy], tau[it]])
-                                    TFarray[:, :, l, it] = FundSol(pulse, recordingTimes - tau[it],
-                                           velocity, receiverPoints, samplingPoints[k, :2])
-                                    k += 1
-                                    l += 1
-                                    sleep(0.001)
-                        
-                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
-                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                                 x=x, y=y, tau=tau, samplingPoints=samplingPoints)
-                    
-                    elif not np.array_equal(TFDict['time'], recordingTimes):
-                        print('Current recording time interval is inconsistent...')
                         print('Recomputing test functions...')
                         samplingPoints = np.zeros((Nx * Ny * Ntau, 3))
                         TFarray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
@@ -668,32 +669,32 @@ def solver(medium, alpha):
                             print('Recording time interval is consistent...')
                             print('Moving forward to imaging algorithm...')
                             TFarray = TFDict['TFarray']
+                            
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            print('Recomputing test functions...')
+                            samplingPoints = np.zeros((Nx * Ny * Nz * Ntau, 4))
+                            TFarray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
+                            
+                            k = 0 # counter for space-time sampling points
+                            for it in trange(Ntau, desc='Sampling time'):
+                                l = 0 # counter for spatial sampling points
+                                for ix in trange(Nx, desc='Sampling space', leave=False):
+                                    for iy in range(Ny):
+                                        for iz in range(Nz):
+                                            samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz], tau[it]])
+                                            TFarray[:, :, l, it] = FundSol(pulse, recordingTimes - tau[it],
+                                                   velocity, receiverPoints, samplingPoints[k, :3])
+                                            k += 1
+                                            l += 1
+                                            sleep(0.001)
+                            
+                            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                     x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
                         
-                    elif TFDict['peakFreq'] != peakFreq or TFDict['peakTime'] != peakTime or TFDict['velocity'] != velocity:
+                    else:
                         print('Current pulse function is inconsistent...')
-                        print('Recomputing test functions...')
-                        samplingPoints = np.zeros((Nx * Ny * Nz * Ntau, 4))
-                        TFarray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
-                        
-                        k = 0 # counter for space-time sampling points
-                        for it in trange(Ntau, desc='Sampling time'):
-                            l = 0 # counter for spatial sampling points
-                            for ix in trange(Nx, desc='Sampling space', leave=False):
-                                for iy in range(Ny):
-                                    for iz in range(Nz):
-                                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz], tau[it]])
-                                        TFarray[:, :, l, it] = FundSol(pulse, recordingTimes - tau[it],
-                                               velocity, receiverPoints, samplingPoints[k, :3])
-                                        k += 1
-                                        l += 1
-                                        sleep(0.001)
-                        
-                        np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
-                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                                 x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
-                    
-                    elif not np.array_equal(TFDict['time'], recordingTimes):
-                        print('Current recording time interval is inconsistent...')
                         print('Recomputing test functions...')
                         samplingPoints = np.zeros((Nx * Ny * Nz * Ntau, 4))
                         TFarray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
