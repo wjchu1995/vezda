@@ -26,12 +26,15 @@ from pathlib import Path
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument('--type', type=str, choices=['data', 'testfunc'], required=True,
-                        help='''Specify whether to plot the scattered wave data or simulated test functions.
+                        help='''Specify whether to plot the recorded data or simulated test functions.
                         Type must be either \'data\' or \'testfunc\'.''')
     parser.add_argument('--tu', type=str,
                         help='Specify the time units (e.g., \'s\' or \'ms\').')
     parser.add_argument('--au', type=str,
                         help='Specify the amplitude units (e.g., \'m\' or \'mm\').')
+    parser.add_argument('--title', type=str,
+                        help='''Specify a title for the wiggle plot. Default title is
+                        \'Data\' if \'--type=data\' and 'Test Function' if \'--type=testfunc\'.''')
     parser.add_argument('--format', '-f', type=str, default='pdf', choices=['png', 'pdf', 'ps', 'eps', 'svg'],
                         help='''Specify the image format of the saved file. Accepted formats are png, pdf,
                         ps, eps, and svg. Default format is set to pdf.''')
@@ -72,6 +75,19 @@ def cli():
             plotParams['au'] = au
         else:
             au = plotParams['au']
+            
+        if args.title is not None:
+            if args.type == 'data':
+                data_title = args.title
+                plotParams['data_title'] = data_title
+            elif args.type == 'testfunc':
+                tf_title = args.title
+                plotParams['tf_title'] = tf_title
+        else:
+            if args.type == 'data':
+                data_title = plotParams['data_title']
+            elif args.type == 'testfunc':
+                tf_title = plotParams['tf_title']
         
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
     
@@ -121,6 +137,19 @@ def cli():
         else:
             au = ''
         plotParams['au'] = au
+        
+        if args.title is not None:
+            if args.type == 'data':
+                data_title = args.title
+                tf_title = 'Test Function'
+            elif args.type == 'testfunc':
+                data_title = 'Data'
+                tf_title = args.title
+        else:
+            data_title = 'Data'
+            tf_title = 'Test Function'
+        plotParams['data_title'] = data_title
+        plotParams['tf_title'] = tf_title
         
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
         
@@ -310,50 +339,50 @@ def cli():
         if sourcePoints.shape[1] == 2:
             if args.type == 'data':
                 if  xu != '' and yu != '':
-                    ax.set_title('''Scattered Wave [Source %s @ (%0.2f %s, %0.2f %s)]'''
-                                 %(sinterval[ax.index],
+                    ax.set_title('''%s [Source %s @ (%0.2f %s, %0.2f %s)]'''
+                                 %(data_title, sinterval[ax.index],
                                    sourcePoints[ax.index, 0], xu,
                                    sourcePoints[ax.index, 1], yu))
                 else:
-                    ax.set_title('''Scattered Wave [Source %s @ (%0.2f, %0.2f)]'''
-                                 %(sinterval[ax.index],
+                    ax.set_title('''%s [Source %s @ (%0.2f, %0.2f)]'''
+                                 %(data_title, sinterval[ax.index],
                                    sourcePoints[ax.index, 0],
                                    sourcePoints[ax.index, 1]))
                 
             elif args.type == 'testfunc':
                 if xu != '' and yu != '':
-                    ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f %s, %0.2f %s)]'''
-                                 %(sourcePoints[ax.index, 0], xu,
+                    ax.set_title('''%s [$\\bf{z}$ @ (%0.2f %s, %0.2f %s)]'''
+                                 %(tf_title, sourcePoints[ax.index, 0], xu,
                                    sourcePoints[ax.index, 1], yu))
                 elif xu == '' and yu == '':
-                    ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f, %0.2f)]'''
-                                 %(sourcePoints[ax.index, 0],
+                    ax.set_title('''%s [$\\bf{z}$ @ (%0.2f, %0.2f)]'''
+                                 %(tf_title, sourcePoints[ax.index, 0],
                                    sourcePoints[ax.index, 1]))
                     
         elif sourcePoints.shape[1] == 3:
             if args.type == 'data':
                 if  xu != '' and yu != '' and zu != '':
-                    ax.set_title('''Scattered Wave [Source %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
-                                 %(sinterval[ax.index],
+                    ax.set_title('''%s [Source %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
+                                 %(data_title, sinterval[ax.index],
                                    sourcePoints[ax.index, 0], xu,
                                    sourcePoints[ax.index, 1], yu,
                                    sourcePoints[ax.index, 2], zu))
                 else:
-                    ax.set_title('''Scattered Wave [Source %s @ (%0.2f, %0.2f, %0.2f)]'''
-                                 %(sinterval[ax.index],
+                    ax.set_title('''%s [Source %s @ (%0.2f, %0.2f, %0.2f)]'''
+                                 %(data_title, sinterval[ax.index],
                                    sourcePoints[ax.index, 0],
                                    sourcePoints[ax.index, 1],
                                    sourcePoints[ax.index, 2]))
                 
             elif args.type == 'testfunc':
                 if xu != '' and yu != '' and zu != '':
-                    ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
-                                 %(sourcePoints[ax.index, 0], xu,
+                    ax.set_title('''%s [$\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]'''
+                                 %(tf_title, sourcePoints[ax.index, 0], xu,
                                    sourcePoints[ax.index, 1], yu,
                                    sourcePoints[ax.index, 2], zu))
                 elif xu == '' and yu == '' and zu == '':
-                    ax.set_title('''Test Function [$\\bf{z}$ @ (%0.2f, %0.2f, %0.2f)]'''
-                                 %(sourcePoints[ax.index, 0],
+                    ax.set_title('''%s [$\\bf{z}$ @ (%0.2f, %0.2f, %0.2f)]'''
+                                 %(tf_title, sourcePoints[ax.index, 0],
                                    sourcePoints[ax.index, 1],
                                    sourcePoints[ax.index, 2]))
                        

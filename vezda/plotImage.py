@@ -424,6 +424,8 @@ def cli():
         plotParams['tu'] = tu
         au = ''
         plotParams['au'] = au
+        plotParams['data_title']= 'Data'
+        plotParams['tf_title'] = 'Test Function'
         
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
