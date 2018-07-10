@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from vezda.plot_utils import default_params, remove_keymap_conflicts
 from skimage import measure
 from pathlib import Path
 from tqdm import trange
@@ -246,27 +247,24 @@ def cli():
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
     #==============================================================================
     else: # create a plotParams dictionary file with default values
-        plotParams = {}
-        #for both image and wiggle plots
-        if args.format is None:
-            pltformat = 'pdf'
-        else:
-            pltformat = args.format
-        plotParams['pltformat'] = pltformat
+        plotParams = default_params()
         
+        # updated parameters based on passed arguments
+        #for both image and wiggle plots
+        if args.format is not None:
+            pltformat = args.format
+            plotParams['pltformat'] = pltformat
+            
         # for image/map plots
-        if args.isolevel is None:
-            isolevel = 0.7
-        else:
+        if args.isolevel is not None:
             isolevel = args.isolevel
-        plotParams['isolevel'] = isolevel
+            plotParams['isolevel'] = isolevel
         
         if args.colormap is not None:
             colormap = plt.get_cmap(args.colormap)
             plotParams['colormap'] = args.colormap
         else:
             colormap = plt.cm.magma
-            plotParams['colormap'] = 'magma'
             
         if args.colorbar is not None:
             if args.colorbar == 'n' or args.colorbar == 'no' or args.colorbar == 'false':
@@ -277,25 +275,19 @@ def cli():
                 plotParams['colorbar'] = wantColorbar
         else:
             wantColorbar = False
-            plotParams['colorbar'] = wantColorbar
         
-        if args.xlabel is None:
-            xlabel = ''
-        else:
+        if args.xlabel is not None:
             xlabel = args.xlabel
-        plotParams['xlabel'] = xlabel
+            plotParams['xlabel'] = xlabel
         
         if args.ylabel is None:
-            ylabel = ''
-        else:
             ylabel = args.ylabel
-        plotParams['ylabel'] = ylabel
+            plotParams['ylabel'] = ylabel        
         
         if args.zlabel is None:
-            zlabel = ''
-        else:
             zlabel = args.zlabel
-        plotParams['zlabel'] = zlabel
+            plotParams['zlabel'] = zlabel            
+        
         #==============================================================================
         if all(v is not None for v in [args.xu, args.yu, args.zu]):
             xu = args.xu
@@ -420,23 +412,10 @@ def cli():
             showReceivers = True
             plotParams['show_receivers'] = showReceivers
         #==============================================================================
-        tu = ''
-        plotParams['tu'] = tu
-        au = ''
-        plotParams['au'] = au
-        plotParams['data_title']= 'Data'
-        plotParams['tf_title'] = 'Test Function'
         
         pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
 
     #==============================================================================
-    def remove_keymap_conflicts(new_keys_set):
-        for prop in plt.rcParams:
-            if prop.startswith('keymap.'):
-                keys = plt.rcParams[prop]
-                remove_list = set(keys) & new_keys_set
-                for key in remove_list:
-                    keys.remove(key)
     
     def process_key(event, Ntau, tau):
         fig = event.canvas.figure

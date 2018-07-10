@@ -21,21 +21,29 @@ from pathlib import Path
 from scipy.sparse.linalg import LinearOperator, eigsh
 from scipy.fftpack import fft, ifft
 from scipy.signal import tukey
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-plt.style.use('ggplot')
+from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
+                              process_key_vectors, default_params, setFigure)
 import numpy as np
+import pickle
 import time
 
 sys.path.append(os.getcwd())
 import pulseFun
 
 #==============================================================================
-# Used to convert elapsed time (in seconds) to 
-# human-readable format (hours : minutes : seconds)
 def humanReadable(seconds):
+    '''
+    Used to convert elapsed time (in seconds) to 
+    human-readable format (hours : minutes : seconds)
+    '''
+    
     h = int(seconds / 3600)
     m = int((seconds % 3600) / 60)
     s = seconds % 60.0
+    
     return '{}h : {:>02}m : {:>05.2f}s'.format(h, m, s)
 
 #==============================================================================
@@ -44,9 +52,11 @@ def isValid(numVals):
     while validType == False:
         if type(numVals) == int:
             validType = True
+            
             if numVals >= 1:
                 isValid = True
                 break
+            
             else:
                 print(textwrap.dedent(
                      '''
@@ -55,6 +65,7 @@ def isValid(numVals):
                      '''))
                 isValid = False
                 break
+       
         elif type(numVals) != int:
             print(textwrap.dedent(
                  '''
@@ -65,6 +76,7 @@ def isValid(numVals):
         
     return isValid
 
+#==============================================================================
 def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument('--numVals', '-k', type=int,
@@ -72,10 +84,14 @@ def cli():
                         Must a positive integer between 1 and the order of the square
                         input matrix.''')
     parser.add_argument('--plot', '-p', action='store_true',
-                        help='''Plot the computed singular values.''')
+                        help='''Plot the computed singular values and vectors.''')
     parser.add_argument('--format', '-f', type=str, default='pdf', choices=['png', 'pdf', 'ps', 'eps', 'svg'],
                         help='''specify the image format of the saved file. Accepted formats are png, pdf,
                         ps, eps, and svg. Default format is set to pdf.''')
+    parser.add_argument('--mode', type=str, choices=['light', 'dark'], required=False,
+                        help='''Specify whether to view plots in light mode for daytime viewing
+                        or dark mode for night viewing.
+                        Mode must be either \'light\' or \'dark\'.''')
     args = parser.parse_args()
     
     try:
@@ -365,44 +381,77 @@ def cli():
                 arguments with 'vzsvd' command.
                 '''))  
     #==============================================================================
+    # Read in input files 
+    datadir = np.load('datadir.npz')
+    recordingTimes = np.load(str(datadir['recordingTimes']))
+    receiverPoints = np.load(str(datadir['receivers']))
+    sourcePoints = np.load(str(datadir['sources']))
+    
+    t0 = recordingTimes[0]
+    tf = recordingTimes[-1]
+    
+    if Path('window.npz').exists():
+        windowDict = np.load('window.npz')
+        
+        # Apply the receiver window
+        rstart = windowDict['rstart']
+        rstop = windowDict['rstop']
+        rstep = windowDict['rstep']
+        
+        # Apply the time window
+        tstart = windowDict['tstart']
+        tstop = windowDict['tstop']
+        tstep = windowDict['tstep']
+        
+        dt = (tf - t0) / (len(recordingTimes) - 1)
+        
+        twStart = int(round(tstart / dt))
+        twStop = int(round(tstop / dt))
+        
+        # Apply the source window
+        sstart = windowDict['sstart']
+        sstop = windowDict['sstop']
+        sstep = windowDict['sstep']
+        
+    else:
+        rstart = 0
+        rstop = receiverPoints.shape[0]
+        rstep = 1
+        
+        sstart = 0
+        sstop = sourcePoints.shape[0]
+        sstep = 1
+        
+        twStart = 0
+        twStop = len(recordingTimes)
+        tstep = 1
+        
+    # Apply the receiver window
+    rinterval = np.arange(rstart, rstop, rstep)
+    receiverPoints = receiverPoints[rinterval, :]
+    
+    # Apply the time window
+    tinterval = np.arange(twStart, twStop, tstep)
+    recordingTimes = recordingTimes[tinterval]
+    
+    # Apply the source window
+    sinterval = np.arange(sstart, sstop, sstep)
+    sourcePoints = sourcePoints[sinterval, :]
+    
     if computeSVD:
-        # Read in the input file and set up the 3D scattered data array
-        datadir = np.load('datadir.npz')
+        # set up the 3D data array
         scatteredData  = np.load(str(datadir['scatteredData']))
         if Path('window.npz').exists():
             print('Detected user-specified window:\n')
-            windowDict = np.load('window.npz')
             
-            # Apply the receiver window
-            rstart = windowDict['rstart']
-            rstop = windowDict['rstop']
-            rstep = windowDict['rstep']
-            rinterval = np.arange(rstart, rstop, rstep)
             print('window @ receivers : start =', rstart)
             print('window @ receivers : stop =', rstop)
             print('window @ receivers : step =', rstep, '\n')
             
-            # Apply the time window
-            tstart = windowDict['tstart']
-            tstop = windowDict['tstop']
-            tstep = windowDict['tstep']
             print('window @ time : start =', tstart)
             print('window @ time : stop =', tstop)
             print('window @ time : step =', tstep, '\n')
             
-            recordingTimes = np.load(str(datadir['recordingTimes']))
-            dt = (recordingTimes[-1] - recordingTimes[0]) / (len(recordingTimes) - 1)
-            
-            Tstart = int(round(tstart / dt))
-            Tstop = int(round(tstop / dt))
-            
-            tinterval = np.arange(Tstart, Tstop, tstep)
-            
-            # Apply the source window
-            sstart = windowDict['sstart']
-            sstop = windowDict['sstop']
-            sstep = windowDict['sstep']
-            sinterval = np.arange(sstart, sstop, sstep)
             print('window @ sources : start =', sstart)
             print('window @ sources : stop =', sstop)
             print('window @ sources : step =', sstep, '\n')
@@ -431,6 +480,7 @@ def cli():
             
         else:
             Nr, Nt, Ns = scatteredData.shape
+            
         #==============================================================================
         # MatVec: Definition of the near-field matrix-vector product
         #
@@ -533,7 +583,7 @@ def cli():
                 
                 return np.concatenate((y1, y2))
             
-        A = LinearOperator(shape=(Nt*Nr + Nt*Ns, Nt*Nr + Nt*Ns), matvec=MatVec)
+        A = LinearOperator(shape=(Nt * (Nr + Ns), Nt * (Nr + Ns)), matvec=MatVec)
         
         # Compute the k largest algebraic eigenvalues (which='LA') of the operator A
         # Eigenvalues are elements of the vector 's'
@@ -567,20 +617,61 @@ def cli():
     
     #==============================================================================    
     if args.plot and all(v is not None for v in [s, U, V]):
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.spines['left'].set_color('k')
-        ax.spines['right'].set_color('k')
-        ax.spines['top'].set_color('k')
-        ax.spines['bottom'].set_color('k')
-        ax.plot(s, 'k.', clip_on=False)
-        ax.set_title('Singular Values')
-        ax.set_xlabel('n')
-        ax.set_ylabel('$\sigma_n$')
-        ax.set_xlim([0, len(s)])
-        ax.set_ylim(bottom=0)
-        ax.locator_params(axis='y', nticks=6)
-        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
+        
+        # plot the singular vectors        
+        # Reshape singular vectors for plotting
+        Nr = receiverPoints.shape[0]
+        Nt = len(recordingTimes)
+        Ns = sourcePoints.shape[0]
+        k = len(s)
+        
+        U = np.reshape(U, (Nr, Nt, k))
+        V = np.reshape(V, (Ns, Nt, k))
+        
+        if Path('plotParams.pkl').exists():
+            plotParams = pickle.load(open('plotParams.pkl', 'rb'))
+        
+        else:
+            plotParams = default_params()
+            
+        if args.mode is not None:
+            plotParams['view_mode'] = args.mode
+            pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+        
+        fig_vec, ax1_vec, ax2_vec = setFigure(num_axes=2, mode=plotParams['view_mode'])
+        fig_vals, ax_vals = setFigure(num_axes=1, mode=plotParams['view_mode'])
+        
+        ax1_vec.volume = U
+        ax1_vec.index = 0
+        leftTitle = vector_title('left', ax1_vec.index)
+        plotWiggles(ax1_vec, U[:, :, ax1_vec.index], recordingTimes, t0, tf, rstart, rinterval,
+                    receiverPoints, leftTitle, 'left', plotParams)
+      
+        ax2_vec.volume = V
+        ax2_vec.index = ax1_vec.index
+        rightTitle = vector_title('right', ax2_vec.index)
+        plotWiggles(ax2_vec, V[:, :, ax2_vec.index], recordingTimes, t0, tf, sstart, sinterval,
+                    sourcePoints, rightTitle, 'right', plotParams)
         plt.tight_layout()
-        fig.savefig('singularValues.' + args.format, format=args.format, bbox_inches='tight')
+        fig_vec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, recordingTimes, t0, tf, rstart, sstart, 
+                                                                                    rinterval, sinterval, receiverPoints, 
+                                                                                    sourcePoints, plotParams))
+        #==============================================================================
+        # plot the singular values
+        kappa = s[0] / s[-1]    # condition number = max(s) / min(s)
+        ax_vals.plot(s, '.', clip_on=False, markersize=9, label=r'Condition Number: %0.1e' %(kappa), color=ax_vals.pointcolor)
+        ax_vals.set_xlabel('n', color=ax_vals.labelcolor)
+        ax_vals.set_ylabel('$\sigma_n$', color=ax_vals.labelcolor)
+        legend = ax_vals.legend(title='Singular Values', loc='upper center', bbox_to_anchor=(0.5, 1.25),
+                           markerscale=0, handlelength=0, handletextpad=0, fancybox=True, shadow=True,
+                           fontsize='large')
+        legend.get_title().set_fontsize('large')
+        ax_vals.set_xlim([0, k])
+        ax_vals.set_ylim(bottom=0)
+        ax_vals.locator_params(axis='y', nticks=6)
+        ax_vals.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        plt.tight_layout()
+        fig_vals.savefig('singularValues.' + args.format, format=args.format, bbox_inches='tight')
+        
         plt.show()

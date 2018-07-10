@@ -3,20 +3,24 @@
 
 import sys
 from setuptools import setup, find_packages
+import textwrap
 
 if sys.version_info <= (2,7):
-    sys.exit('''
-             Sorry, Python <= 2.7 is not supported. Vezda requires Python >= 3.
-             (Try obtaining the Anaconda Python distribution at 
-                            https://www.anaconda.com/download/
-             for example.)
-             ''')
+    sys.exit(textwrap.dedent(
+            '''
+            Sorry, Python <= 2.7 is not supported. Vezda requires Python >= 3.
+            (Try obtaining the Anaconda Python distribution at:
+                
+                https://www.anaconda.com/download/
+            
+            for example.)
+            '''))
 
 with open('README.md', 'r') as fh:
      long_description = fh.read()
 
 setup(name = 'vezda',
-      version = '0.3.17',
+      version = '0.4.0',
       description = 'A set of command-line tools for imaging with the linear sampling method',
       long_description = long_description,
       long_description_content_type = 'text/markdown',
@@ -52,6 +56,7 @@ setup(name = 'vezda',
                       'vzgrid = vezda.setSamplingGrid:cli',
                       'vzhome = vezda.home:cli',
                       'vzimage = vezda.plotImage:cli',
+                      'vzpicard = vezda.Picard:cli',
                       'vzsolve = vezda.Solve:cli',
                       'vzsvd = vezda.SVD:cli',
                       'vzwiggles = vezda.plotWiggles:cli',
