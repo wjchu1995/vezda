@@ -18,14 +18,14 @@ import sys
 import argparse
 import textwrap
 from pathlib import Path
-from scipy.sparse.linalg import LinearOperator, eigsh
-from scipy.fftpack import fft, ifft
+from scipy.sparse.linalg import eigsh
 from scipy.signal import tukey
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
                               process_key_vectors, default_params, setFigure)
+from vezda.LinearOperators import asSymmetricOperator
 import numpy as np
 import pickle
 import time
@@ -36,8 +36,8 @@ import pulseFun
 #==============================================================================
 def humanReadable(seconds):
     '''
-    Used to convert elapsed time (in seconds) to 
-    human-readable format (hours : minutes : seconds)
+    Convert elapsed time (in seconds) to human-readable 
+    format (hours : minutes : seconds)
     '''
     
     h = int(seconds / 3600)
@@ -440,7 +440,7 @@ def cli():
     
     if computeSVD:
         # set up the 3D data array
-        scatteredData  = np.load(str(datadir['scatteredData']))
+        data  = np.load(str(datadir['scatteredData']))
         if Path('window.npz').exists():
             print('Detected user-specified window:\n')
             
@@ -457,10 +457,10 @@ def cli():
             print('window @ sources : step =', sstep, '\n')
             
             print('Applying window to data volume...')
-            scatteredData = scatteredData[rinterval, :, :]
-            scatteredData = scatteredData[:, tinterval, :]
-            scatteredData = scatteredData[:, :, sinterval]
-            Nr, Nt, Ns = scatteredData.shape
+            data = data[rinterval, :, :]
+            data = data[:, tinterval, :]
+            data = data[:, :, sinterval]
+            Nr, Nt, Ns = data.shape
             
             # Apply tapered cosine (Tukey) window to time signals.
             # This ensures the fast fourier transform (FFT) used in
@@ -476,114 +476,13 @@ def cli():
             print('Tapering time signals with Tukey window: %d'
                   %(int(round(alpha * 100))) + '%')
             TukeyWindow = tukey(Nt, alpha)
-            scatteredData *= TukeyWindow[None, :, None]
+            data *= TukeyWindow[None, :, None]
             
         else:
-            Nr, Nt, Ns = scatteredData.shape
+            Nr, Nt, Ns = data.shape
             
         #==============================================================================
-        # MatVec: Definition of the near-field matrix-vector product
-        #
-        # x: a random test vector
-        # Nt: number of time samples
-        # Nr: number of receivers
-        # Ns: number of sources
-        #
-        # M = (  zeros     nearFieldMatrix 
-        #      nearFieldMatrix.T    zeros  )
-        #
-        # shape(nearFieldMatrix) = (Nt * Nr) x (Nt * Ns)
-        # shape(nearFieldMatrix.T) = (Nt * Ns) x (Nt * Nr)
-        #
-        # x = ( x1 
-        #       x2 )
-        #
-        # shape(x1) = (Nt * Nr) x 1
-        # shape(x2) = (Nt * Ns) x 1
-        #
-        # Output:
-        #       y = Mx
-        
-        if Nr == Ns:
-            def MatVec(x):        
-                #global scatteredData
-                Nr, Nt, Ns = scatteredData.shape
-                
-                # x1 is the first Nt * Nr elements of the vector x
-                x1 = x[:(Nt * Nr)]
-                
-                # x2 is the last Nt * Ns elements of the vector x
-                x2 = x[-(Nt * Ns):]
-                
-                # reshape x1 and x2 into matrices X1 and X2
-                # X1 multiplies nearFieldMatrix.T (time reversal), so flip up-down
-                X1 = np.flipud(np.reshape(x1, (Nt, Nr), order='F'))
-                X2 = np.reshape(x2, (Nt, Ns), order='F')
-                
-                Y1 = np.zeros((Nt, Nr))
-                Y2 = np.zeros((Nt, Ns))
-                
-                for i in range(Nr):
-                    # Compute the matrix-vector product for nearFieldMatrix * X2
-                    U = scatteredData[i, :, :]
-                    # Circular convolution: pad time axis with zeros to length 2Nt - 1
-                    circularConvolution = ifft(fft(U, n=2*Nt-1, axis=0) * fft(X2, n=2*Nt-1, axis=0), axis=0).real
-                    convolutionMatrix = circularConvolution[:Nt, :]
-                    Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
-                    
-                    # Compute the matrix-vector product for nearFieldMatrix.T * X1
-                    UT = scatteredData[:, :, i].T
-                    # Circular convolution: pad time axis with zeros to length 2Nt - 1
-                    circularConvolutionT = ifft(fft(UT, n=2*Nt-1, axis=0) * fft(X1, n=2*Nt-1, axis=0), axis=0).real
-                    convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])        
-                    Y2[:, i] = np.sum(convolutionMatrixT, axis=1) # sum over all receivers
-                    
-                y1 = np.reshape(Y1, (Nt * Nr, 1), order='F')
-                y2 = np.reshape(Y2, (Nt * Ns, 1), order='F')
-                
-                return np.concatenate((y1, y2))
-            
-        else:   # if Nr != Ns
-            def MatVec(x):        
-                #global scatteredData
-                Nr, Nt, Ns = scatteredData.shape
-                
-                # x1 is the first Nt * Nr elements of the vector x
-                x1 = x[:(Nt * Nr)]
-                
-                # x2 is the last Nt * Ns elements of the vector x
-                x2 = x[-(Nt * Ns):]
-                
-                # reshape x1 and x2 into matrices X1 and X2
-                # X1 multiplies nearFieldMatrix.T (time reversal), so flip up-down
-                X1 = np.flipud(np.reshape(x1, (Nt, Nr), order='F'))
-                X2 = np.reshape(x2, (Nt, Ns), order='F')
-                
-                Y1 = np.zeros((Nt, Nr))
-                Y2 = np.zeros((Nt, Ns))
-                
-                for i in range(Nr):
-                    # Compute the matrix-vector product for nearFieldMatrix * X2
-                    U = scatteredData[i, :, :]
-                    # Circular convolution: pad time axis with zeros to length 2Nt - 1
-                    circularConvolution = ifft(fft(U, n=2*Nt-1, axis=0) * fft(X2, n=2*Nt-1, axis=0), axis=0).real
-                    convolutionMatrix = circularConvolution[:Nt, :]
-                    Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
-                    
-                for j in range(Ns):
-                    # Compute the matrix-vector product for nearFieldMatrix.T * X1
-                    UT = scatteredData[:, :, j].T
-                    # Circular convolution: pad time axis with zeros to length 2Nt - 1
-                    circularConvolutionT = ifft(fft(UT, n=2*Nt-1, axis=0) * fft(X1, n=2*Nt-1, axis=0), axis=0).real
-                    convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])        
-                    Y2[:, j] = np.sum(convolutionMatrixT, axis=1) # sum over all receivers
-                    
-                y1 = np.reshape(Y1, (Nt * Nr, 1), order='F')
-                y2 = np.reshape(Y2, (Nt * Ns, 1), order='F')
-                
-                return np.concatenate((y1, y2))
-            
-        A = LinearOperator(shape=(Nt * (Nr + Ns), Nt * (Nr + Ns)), matvec=MatVec)
+        A = asSymmetricOperator(data)
         
         # Compute the k largest algebraic eigenvalues (which='LA') of the operator A
         # Eigenvalues are elements of the vector 's'
@@ -619,13 +518,12 @@ def cli():
     if args.plot and all(v is not None for v in [s, U, V]):
         remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
         
-        # plot the singular vectors        
-        # Reshape singular vectors for plotting
         Nr = receiverPoints.shape[0]
         Nt = len(recordingTimes)
         Ns = sourcePoints.shape[0]
         k = len(s)
         
+        # Reshape singular vectors for plotting
         U = np.reshape(U, (Nr, Nt, k))
         V = np.reshape(V, (Ns, Nt, k))
         

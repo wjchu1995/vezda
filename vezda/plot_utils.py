@@ -429,16 +429,6 @@ def remove_keymap_conflicts(new_keys_set):
             remove_list = set(keys) & new_keys_set
             for key in remove_list:
                 keys.remove(key)
-                
-#def save_key(event):
-#   if args.type == 'data':
-#       fig.savefig(args.type + '_src' + str(sinterval[ax.index]) + '.' + args.format,
-#                  format=pltformat, bbox_inches='tight', transparent=True)
-#   elif args.type == 'testfunc':
-#       fig.savefig(args.type + '_pnt' + str(sinterval[ax.index]) + '.' + args.format,
-#                  format=pltformat, bbox_inches='tight', transparent=True)
-    
-
 
 
 

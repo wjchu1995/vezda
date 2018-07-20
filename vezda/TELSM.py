@@ -20,7 +20,7 @@ import numpy as np
 #from vezda.Morozov import Morozov
 from vezda.Tikhonov import Tikhonov
 from vezda.FundamentalSolutions import FundSol
-from scipy.fftpack import fft, ifft, fftfreq
+from vezda.math_utils import timeShift
 #from scipy.optimize import fsolve
 from scipy.linalg import norm
 from tqdm import trange
@@ -33,39 +33,6 @@ from pathlib import Path
 # user.
 sys.path.append(os.getcwd())
 import pulseFun
-
-def timeShift(data, tau, dt):
-    '''
-    Apply the time-shift parameter 'tau' to the test
-    functions in 'data' using FFT.
-    
-    'data' is a 3D array with time on axis=1
-    'tau' is a constant representing the time shift
-    'dt' is the length of the time step (used to generate the discretized frequency bins)
-    '''
-    
-    # Get the shape of the data array
-    # Nr : number of receivers
-    # Nt : number of time samples
-    # Ns : number of sources
-    Nr, Nt, Ns = data.shape
-    
-    # FFT the 'data' array into the frequency domain along the time axis=1
-    # Pad the time axis with zeros to length 2 * Nt - 1
-    freqData = fft(data, n=2*Nt-1, axis=1)
-    
-    # Set up the phase vector e^(-i * omega * tau)
-    iomega = 2j * np.pi * fftfreq(2*Nt-1, dt)
-    phase = np.exp(-iomega * tau)
-    
-    # Apply time shift in the frequency domain (element-wise array multiplication)
-    # and inverse FFT back into the time domain (keeping only the real part)
-    shiftedData = ifft(freqData * phase[None, :, None], axis=1).real
-    
-    # Return the shifted data array with the first Nt components along
-    # the time axis (axis=1) corresponding to the original length of the
-    # time axis.
-    return shiftedData[:, :Nt, :]
 
 def solver(medium, alpha):
     # Read in the computed singular-value decomposition of the near-field matrix
@@ -82,6 +49,7 @@ def solver(medium, alpha):
     datadir = np.load('datadir.npz')
     recordingTimes = np.load(str(datadir['recordingTimes']))
     receiverPoints = np.load(str(datadir['receivers']))
+    sourcePoints = np.load(str(datadir['sources']))
     
     # Compute length of time step.
     # This parameter is used for FFT shifting and time windowing
@@ -106,6 +74,11 @@ def solver(medium, alpha):
         rstop = windowDict['rstop']
         rstep = windowDict['rstep']
         
+        # Source window parameters
+        sstart = windowDict['sstart']
+        sstop = windowDict['sstop']
+        sstep = windowDict['sstep']
+        
     else:
         # Set default window parameters if user did
         # not specify window parameters.
@@ -124,6 +97,11 @@ def solver(medium, alpha):
         rstop = receiverPoints.shape[0]
         rstep = 1
         
+        # Source window parameters
+        sstart = 0
+        sstop = sourcePoints.shape[0]
+        sstep = 1
+        
     # Slice the recording times according to the time window parameters
     # to create a time window array
     tinterval = np.arange(twStart, twStop, tstep)
@@ -131,7 +109,11 @@ def solver(medium, alpha):
     
     # Slice the receiverPoints array according to the receiver window parametes
     rinterval = np.arange(rstart, rstop, rstep)
-    receiverPoints = receiverPoints[rinterval, :]    
+    receiverPoints = receiverPoints[rinterval, :]
+
+    # Slice the sourcePoints array according to the source window parametes
+    sinterval = np.arange(sstart, sstop, sstep)
+    sourcePoints = sourcePoints[sinterval, :]    
     
     Nr = receiverPoints.shape[0]
     Nt = len(recordingTimes)    # number of samples in time window
@@ -181,8 +163,7 @@ def solver(medium, alpha):
         if Ntau > 1:
             deltaTau = tau[1] - tau[0] # step size for sampling in time
         
-        # Initialize the Histogram for storing images at each sampling point
-        # in time.
+        # Initialize the Histogram for storing images at each sampling point in time.
         # Initialize the Image (time-integrated Histogram with respect to L2 norm)
         Histogram = np.zeros((Nx, Ny, Ntau))
         Image = np.zeros(X.shape)
@@ -530,8 +511,8 @@ def solver(medium, alpha):
                         for iy in trange(Ny, desc='Solving system'):
                             for ix in range(Nx):
                                 tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                phi_alpha = Tikhonov(U, s, V, tf, alpha)
-                                Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
+                                phi_alpha[:, l, 0] = Tikhonov(U, s, V, tf, alpha)
+                                Image[ix, iy] = 1.0 / (norm(phi_alpha[:, l, 0]) + eps)
                                 l += 1
                 
                         Imin = np.min(Image)
@@ -635,8 +616,7 @@ def solver(medium, alpha):
         deltaTau = tau[1] - tau[0] # step size for sampling in time
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
-        # Initialize the Histogram for storing images at each sampling point
-        # in time.
+        # Initialize the Histogram for storing images at each sampling point in time.
         # Initialize the Image (time-integrated Histogram with respect to L2 norm)
         Histogram = np.zeros((Nx, Ny, Nz, Ntau))
         Image = np.zeros(X.shape)

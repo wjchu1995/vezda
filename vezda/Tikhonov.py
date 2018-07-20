@@ -17,20 +17,22 @@ import numpy as np
 from scipy.linalg import diagsvd
 
 def Tikhonov(U, s, V, b, alpha):
-    #Tikhonov: Tikhonov procedure for solving Ax = b via SVD.
-    #
-    # Inputs: 
-    #   U, S, Vh = svd(A) is the singular value decomposition of matrix A,
-    #        i.e., A = U*S*Vh, s = diag(S)
-    #   b: right-hand side of the linear system
-    #   delta: noise or error level (delta > 0)
-    #
-    # Output:
-    #   x_alpha: the regularized solution
+    '''
+    Tikhonov: Tikhonov procedure for solving Ax = b via SVD.
+    
+    Inputs: 
+       U, s, V = svd(A) is the singular-value decomposition of matrix A,
+            i.e., A = U * S * V.T,  s = diag(S)
+       b: right-hand side of the linear system
+       alpha: Tikhonov regularizaton parameter
+    
+    Output:
+       x_alpha: the regularized solution
+    '''
    
-    # Construct the pseudoinverse 'Spi' of the diagonal matrix 'S'
+    # Construct the pseudoinverse 'Sp' of the diagonal matrix 'S'
     sigma = np.divide(s, alpha + s**2)
-    Spi = diagsvd(sigma, V.shape[1], U.shape[1])
+    Sp = diagsvd(sigma, V.shape[1], U.shape[1])
     
     # Return the Tikhonov-regularized solution
-    return np.dot(V, np.dot(Spi, np.dot(U.T, b)))
+    return np.dot(V, np.dot(Sp, np.dot(U.T, b)))

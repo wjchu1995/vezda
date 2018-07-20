@@ -254,11 +254,15 @@ def cli():
         if args.format is not None:
             pltformat = args.format
             plotParams['pltformat'] = pltformat
+        else:
+            pltformat = plotParams['pltformat']
             
         # for image/map plots
         if args.isolevel is not None:
             isolevel = args.isolevel
             plotParams['isolevel'] = isolevel
+        else:
+            isolevel = plotParams['isolevel']
         
         if args.colormap is not None:
             colormap = plt.get_cmap(args.colormap)
@@ -279,14 +283,20 @@ def cli():
         if args.xlabel is not None:
             xlabel = args.xlabel
             plotParams['xlabel'] = xlabel
+        else:
+            xlabel = plotParams['xlabel']
         
-        if args.ylabel is None:
+        if args.ylabel is not None:
             ylabel = args.ylabel
-            plotParams['ylabel'] = ylabel        
+            plotParams['ylabel'] = ylabel
+        else:
+            ylabel = plotParams['ylabel']
         
-        if args.zlabel is None:
+        if args.zlabel is not None:
             zlabel = args.zlabel
-            plotParams['zlabel'] = zlabel            
+            plotParams['zlabel'] = zlabel
+        else:
+            zlabel = plotParams['zlabel']            
         
         #==============================================================================
         if all(v is not None for v in [args.xu, args.yu, args.zu]):

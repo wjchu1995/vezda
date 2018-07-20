@@ -20,7 +20,7 @@ with open('README.md', 'r') as fh:
      long_description = fh.read()
 
 setup(name = 'vezda',
-      version = '0.4.0',
+      version = '0.4.1',
       description = 'A set of command-line tools for imaging with the linear sampling method',
       long_description = long_description,
       long_description_content_type = 'text/markdown',
