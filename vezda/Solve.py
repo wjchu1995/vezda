@@ -14,18 +14,24 @@
 #==============================================================================
 
 import sys
+import numpy as np
 import argparse
 import textwrap
 import vezda.TELSM
+import vezda.CLSM
 
 def cli():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--method', type=str, default='telsm', choices=['telsm', 'clsm'],
+                        help='''Specify whether to use the total-energy linear sampling method (telsm)
+                        or the concurrent linear sampling method (clsm).
+                        Default is set to 'telsm'.''')
     parser.add_argument('--regPar', '--alpha', type=float,
                         help='Specify the value of the regularization parameter')
     parser.add_argument('--medium', type=str, default='constant', choices=['constant', 'variable'],
                         help='''Specify whether the background medium is constant or variable
                         (inhomogeneous). If argument is set to 'constant', the velocity defined in
-                        the required 'pulseFun.py' file is used. Default is set to 'constant'.''')
+                        the required 'pulsesFun.py' file is used. Default is set to 'constant'.''')
     args = parser.parse_args()
     
     if args.regPar is not None and args.regPar >= 0:
@@ -37,7 +43,34 @@ def cli():
                 Error: Optional argument '--regPar/--alpha' cannot be negative. 
                 The regularization parameter must be greater than or equal to zero.
                 '''))
-    elif args.regPar is None:
+    else:
+        # if args.regPar is None
         alpha = 0
         
-    vezda.TELSM.solver(args.medium, alpha)
+    if args.method == 'telsm':
+        # Solve the near-field equation using the total-energy linear sampling method
+        # Read in the computed singular-value decomposition of the near-field operator
+        # Singular values are stored in vector s
+        # Left vectors are columns of U
+        # Right vectors are columns of V
+        
+        dataSVD = np.load('NFO_SVD.npz')
+        s = dataSVD['s']
+        U = dataSVD['U']
+        V = dataSVD['V']
+        
+        vezda.TELSM.solver(args.medium, s, U, V, alpha)
+        
+    elif args.method == 'clsm':
+        # Solve the Lippmann-Schwinger equation using the concurrent linear sampling method
+        # Read in the computed singular-value decomposition of the Lippmann-Schwinger operator
+        # Singular values are stored in vector s
+        # Left vectors are columns of U
+        # Right vectors are columns of V
+        
+        testFuncSVD = np.load('LSO_SVD.npz')
+        s = testFuncSVD['s']
+        U = testFuncSVD['U']
+        V = testFuncSVD['V']
+        
+        vezda.CLSM.solver(s, U, V, alpha)

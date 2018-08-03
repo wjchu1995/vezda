@@ -23,6 +23,7 @@ from scipy.signal import tukey
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
+from vezda.sampling_utils import samplingIsCurrent, sampleSpaceTime
 from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
                               process_key_vectors, default_params, setFigure)
 from vezda.LinearOperators import asSymmetricOperator
@@ -79,8 +80,14 @@ def isValid(numVals):
 #==============================================================================
 def cli():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--nfo', action='store_true',
+                        help='''Compute or plot the singular-value decomposition of the
+                        near-field operator (NFO).''')
+    parser.add_argument('--lso', action='store_true',
+                        help='''Compute or plot the singular-value decomposition of the
+                        Lippmann-Schwinger operator (LSO).''')
     parser.add_argument('--numVals', '-k', type=int,
-                        help='''specify the number of singular values/vectors to compute.
+                        help='''Specify the number of singular values/vectors to compute.
                         Must a positive integer between 1 and the order of the square
                         input matrix.''')
     parser.add_argument('--plot', '-p', action='store_true',
@@ -90,43 +97,71 @@ def cli():
                         ps, eps, and svg. Default format is set to pdf.''')
     parser.add_argument('--mode', type=str, choices=['light', 'dark'], required=False,
                         help='''Specify whether to view plots in light mode for daytime viewing
-                        or dark mode for night viewing.
+                        or dark mode for nighttime viewing.
                         Mode must be either \'light\' or \'dark\'.''')
     args = parser.parse_args()
     
-    try:
-        s = np.load('singularValues.npy')
-    except FileNotFoundError:
-        s = None
+    if args.nfo and not args.lso:
+        objectString = 'near-field operator'
+        try:
+            NFO_SVD = np.load('NFO_SVD.npz')
+            s = NFO_SVD['s']
+            U = NFO_SVD['U']
+            V = NFO_SVD['V']
+        
+        except FileNotFoundError:
+            s, U, V = None, None, None
     
-    try:
-        U = np.load('leftVectors.npy')
-    except FileNotFoundError:
-        U = None
+    elif not args.nfo and args.lso:
+        objectString = 'Lippmann-Schwinger operator'
+        try:
+            LSO_SVD = np.load('LSO_SVD.npz')
+            s = LSO_SVD['s']
+            U = LSO_SVD['U']
+            V = LSO_SVD['V']
+            
+        except FileNotFoundError:
+            s, U, V = None, None, None
+            
+    elif args.nfo and args.lso:
+        sys.exit(textwrap.dedent(
+                '''
+                UsageError: Please specify only one of the arguments \'--nfo\' or \'--lso\'.
+                '''))
     
-    try:
-        V = np.load('rightVectors.npy')
-    except FileNotFoundError:
-        V = None
+    else:
+        sys.exit(textwrap.dedent(
+                '''
+                For which operator would you like to compute or plot a singular-value decomposition?
+                Enter:
+                    
+                    vzsvd --nfo
+                
+                for the near-field operator or
+                
+                    vzsvd --lso
+                    
+                for the Lippman-Schwinger operator.
+                '''))
     
     #==============================================================================
     # if an SVD already exists...    
-    if all(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
+    if any(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
         if args.numVals >= 1 and args.numVals == len(s):
             userResponded = False
             print(textwrap.dedent(
                  '''
-                 A singular-value decomposition for {n} values/vectors already exists. 
+                 A singular-value decomposition of the {s} for {n} values/vectors already exists. 
                  What would you like to do?
                  
                  Enter '1' to specify a new number of values/vectors to compute. (Default)
                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
                  Enter 'q/quit' to exit.
-                 '''.format(n=args.numVals)))
+                 '''.format(s=objectString, n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -136,7 +171,7 @@ def cli():
                         break
                 elif answer == '2':
                     k = args.numVals
-                    print('Recomputing SVD for %s singular values/vectors...' %(k))
+                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(objectString, k))
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
@@ -164,7 +199,7 @@ def cli():
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -191,17 +226,17 @@ def cli():
             userResponded = False
             print(textwrap.dedent(
                  '''
-                 A singular-value decomposition for {n} values/vectors already exists. 
+                 A singular-value decomposition of the {s} for {n} values/vectors already exists. 
                  What would you like to do?
                  
                  Enter '1' to specify a new number of values/vectors to compute. (Default)
                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
                  Enter 'q/quit' to exit.
-                 '''.format(n=args.numVals)))
+                 '''.format(s=objectString, n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -211,7 +246,7 @@ def cli():
                         break
                 elif answer == '2':
                     k = args.numVals
-                    print('Recomputing SVD for %s singular values/vectors...' %(k))
+                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(objectString, k))
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
@@ -239,7 +274,7 @@ def cli():
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -261,10 +296,10 @@ def cli():
     elif all(v is not None for v in [s, U, V]) and args.numVals is None and args.plot is False:
         sys.exit(textwrap.dedent(
                 '''
-                No action specified. A singular-value decomposition for %s values/vectors
-                already exists. Please specify at least one of '-k/--numVals' or '-p/--plot'
-                arguments with 'vzsvd' command.
-                ''' %(len(s))))
+                No action specified. A singular-value decomposition of the %s
+                for %s values/vectors already exists. Please specify at least one of '-k/--numVals'
+                or '-p/--plot' arguments with 'vzsvd' command.
+                ''' %(objectString, len(s))))
     #==============================================================================
     # if an SVD does not already exist...
     elif any(v is None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
@@ -288,7 +323,7 @@ def cli():
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -311,16 +346,16 @@ def cli():
         userResponded = False
         print(textwrap.dedent(
              '''
-             PlotError: A singular-value decomposition does not exist. A plot will be
+             PlotError: A singular-value decomposition of the {s} does not exist. A plot will be
              generated after a singular-value decomposition has been computed.
              
              Enter '1' to specify a number of singular values/vectors to compute. (Default)
              Enter 'q/quit' to exit.
-             '''))
+             '''.format(s=objectString)))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == '1':
-                k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                k = int(input('Please specify the number of singular values/vectors to compute: '))
                 if isValid(k):
                     print('Proceeding with numVals = %s...' %(k))
                     userResponded = True
@@ -354,7 +389,7 @@ def cli():
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
-                    k = int(input('Please specify the number of singular values/vectors to compute: numVals = '))
+                    k = int(input('Please specify the number of singular values/vectors to compute: '))
                     if isValid(k):
                         print('Proceeding with numVals = %s...' %(k))
                         userResponded = True
@@ -376,17 +411,15 @@ def cli():
     elif any(v is None for v in [s, U, V]) and args.numVals is None and args.plot is False:
         sys.exit(textwrap.dedent(
                 '''
-                Nothing to be done. A singular-value decomposition does not exist.
+                Nothing to be done. A singular-value decomposition of the {s} does not exist.
                 Please specify at least one of '-k/--numVals' or '-p/--plot'
                 arguments with 'vzsvd' command.
-                '''))  
+                '''.format(s=objectString)))  
     #==============================================================================
-    # Read in input files 
+    # Read in data files 
     datadir = np.load('datadir.npz')
-    recordingTimes = np.load(str(datadir['recordingTimes']))
     receiverPoints = np.load(str(datadir['receivers']))
-    sourcePoints = np.load(str(datadir['sources']))
-    
+    recordingTimes = np.load(str(datadir['recordingTimes']))
     t0 = recordingTimes[0]
     tf = recordingTimes[-1]
     
@@ -402,87 +435,153 @@ def cli():
         tstart = windowDict['tstart']
         tstop = windowDict['tstop']
         tstep = windowDict['tstep']
-        
+    
         dt = (tf - t0) / (len(recordingTimes) - 1)
-        
+    
         twStart = int(round(tstart / dt))
         twStop = int(round(tstop / dt))
-        
-        # Apply the source window
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
-        
+    
     else:
         rstart = 0
         rstop = receiverPoints.shape[0]
         rstep = 1
         
-        sstart = 0
-        sstop = sourcePoints.shape[0]
-        sstep = 1
-        
         twStart = 0
         twStop = len(recordingTimes)
-        tstep = 1
-        
+                
     # Apply the receiver window
     rinterval = np.arange(rstart, rstop, rstep)
     receiverPoints = receiverPoints[rinterval, :]
-    
+
     # Apply the time window
     tinterval = np.arange(twStart, twStop, tstep)
     recordingTimes = recordingTimes[tinterval]
-    
-    # Apply the source window
-    sinterval = np.arange(sstart, sstop, sstep)
-    sourcePoints = sourcePoints[sinterval, :]
-    
+        
     if computeSVD:
-        # set up the 3D data array
-        data  = np.load(str(datadir['scatteredData']))
-        if Path('window.npz').exists():
-            print('Detected user-specified window:\n')
+        if args.nfo:
             
-            print('window @ receivers : start =', rstart)
-            print('window @ receivers : stop =', rstop)
-            print('window @ receivers : step =', rstep, '\n')
+            # read in the recorded data array
+            X  = np.load(str(datadir['recordedData']))
             
-            print('window @ time : start =', tstart)
-            print('window @ time : stop =', tstop)
-            print('window @ time : step =', tstep, '\n')
+            if Path('window.npz').exists():
+                print('Detected user-specified window:\n')
+                
+                print('window @ receivers : start =', rstart)
+                print('window @ receivers : stop =', rstop)
+                print('window @ receivers : step =', rstep, '\n')
+                
+                print('window @ time : start =', tstart)
+                print('window @ time : stop =', tstop)
+                print('window @ time : step =', tstep, '\n')
+                
+                # Apply the source window
+                sstart = windowDict['sstart']
+                sstop = windowDict['sstop']
+                sstep = windowDict['sstep']
+                sinterval = np.arange(sstart, sstop, sstep)
+                
+                print('window @ sources : start =', sstart)
+                print('window @ sources : stop =', sstop)
+                print('window @ sources : step =', sstep, '\n')                                
+                
+                print('Applying window to data volume...')
+                X = X[rinterval, :, :]
+                X = X[:, tinterval, :]
+                X = X[:, :, sinterval]
+                Nr, Nt, Ns = X.shape
+                
+                # Apply tapered cosine (Tukey) window to time signals.
+                # This ensures the fast fourier transform (FFT) used in
+                # the definition of the matrix-vector product below is
+                # acting on a function that is continuous at its edges.
+                
+                peakFreq = pulseFun.peakFreq
+                # Np : Number of samples in the dominant period T = 1 / peakFreq
+                Np = int(round(1 / (tstep * dt * peakFreq)))
+                # alpha is set to taper over 6 of the dominant period of the
+                # pulse function (3 periods from each end of the signal)
+                alpha = 6 * Np / Nt
+                print('Tapering time signals with Tukey window: %d'
+                      %(int(round(alpha * 100))) + '%')
+                TukeyWindow = tukey(Nt, alpha)
+                X *= TukeyWindow[None, :, None]
+                
+            else:
+                Nr, Nt, Ns = X.shape
+        
+        elif args.lso:
             
-            print('window @ sources : start =', sstart)
-            print('window @ sources : stop =', sstop)
-            print('window @ sources : step =', sstep, '\n')
+            if Path('samplingGrid.npz').exists():
+                samplingGrid = np.load('samplingGrid.npz')
+                x = samplingGrid['x']
+                y = samplingGrid['y']
+                tau = samplingGrid['tau']
+                if 'z' in samplingGrid:
+                    z = samplingGrid['z']
+                else:
+                    z = None
+                    
+            else:
+                sys.exit(textwrap.dedent(
+                        '''
+                        A sampling grid needs to be set up before computing a
+                        singular-value decomposition of the %s.
+                        Enter:
+                            
+                            vzgrid --help
+                            
+                        from the command-line for more information on how to set up a
+                        sampling grid.
+                        ''' %(objectString)))
             
-            print('Applying window to data volume...')
-            data = data[rinterval, :, :]
-            data = data[:, tinterval, :]
-            data = data[:, :, sinterval]
-            Nr, Nt, Ns = data.shape
-            
-            # Apply tapered cosine (Tukey) window to time signals.
-            # This ensures the fast fourier transform (FFT) used in
-            # the definition of the matrix-vector product below is
-            # acting on a function that is continuous at its edges.
-            
-            # Np : Number of samples in the dominant period T = 1 / peakFreq
+            pulse = lambda t : pulseFun.pulse(t)
+            velocity = pulseFun.velocity
             peakFreq = pulseFun.peakFreq
-            Np = int(round(1 / (tstep * dt * peakFreq)))
-            # alpha is set to taper over 6 of the dominant period of the
-            # pulse function (3 periods from each end of the signal)
-            alpha = 6 * Np / Nt
-            print('Tapering time signals with Tukey window: %d'
-                  %(int(round(alpha * 100))) + '%')
-            TukeyWindow = tukey(Nt, alpha)
-            data *= TukeyWindow[None, :, None]
+            peakTime = pulseFun.peakTime
             
-        else:
-            Nr, Nt, Ns = data.shape
+            if Path('VZTestFuncs.npz').exists():
+                print('\nDetected that free-space test functions have already been computed...')
+                print('Checking consistency with current space-time sampling grid...')
+                TFDict = np.load('VZTestFuncs.npz')
+                
+                if samplingIsCurrent(TFDict, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                    print('Moving forward to SVD...')
+                    X = TFDict['TFarray']
+                    sourcePoints = TFDict['samplingPoints']
+                    
+                else:
+                    print('Recomputing test functions...')
+                    X, sourcePoints = sampleSpaceTime(receiverPoints, recordingTimes, velocity,
+                                                        tau, x, y, z, pulse)
+                    
+                    if z is None:
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                 x=x, y=y, tau=tau, samplingPoints=sourcePoints)
+                    else:
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                 x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+                    
+            else:                
+                print('\nComputing free-space test functions for the current sampling grid...')
+                X, sourcePoints = sampleSpaceTime(receiverPoints, recordingTimes, velocity,
+                                                    tau, x, y, z, pulse)
+                    
+                if z is None:
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                             x=x, y=y, tau=tau, samplingPoints=sourcePoints)
+                else:
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                             x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+                    
+            X = X[:, :, :, 0]    
+            Nr, Nt, Ns = X.shape
             
         #==============================================================================
-        A = asSymmetricOperator(data)
+        A = asSymmetricOperator(X)
         
         # Compute the k largest algebraic eigenvalues (which='LA') of the operator A
         # Eigenvalues are elements of the vector 's'
@@ -492,9 +591,9 @@ def cli():
         # Right singular vectors are the last Nt * Ns eigenvectors of W
         
         if k == 1:
-            print('Computing SVD for 1 singular value/vector...')
+            print('Computing SVD of the %s for 1 singular value/vector...' %(objectString))
         else:
-            print('Computing SVD for %s singular values/vectors...' %(k))
+            print('Computing SVD of the %s for %s singular values/vectors...' %(objectString, k))
         startTime = time.time()
         s, W = eigsh(A, k, which='LA')
         endTime = time.time()
@@ -509,13 +608,59 @@ def cli():
         U = np.sqrt(2) * W[:(Nt * Nr), :]         # left singular vectors
         V = np.sqrt(2) * W[-(Nt * Ns):, :]        # right singular vectors
         
-        # Write binary output with numpy    
-        np.save('singularValues.npy', s)
-        np.save('leftVectors.npy', U)
-        np.save('rightVectors.npy', V)
+        # Write binary output with numpy
+        if args.nfo:
+            np.savez('NFO_SVD.npz', s=s, U=U, V=V)
+        else:
+            np.savez('LSO_SVD.npz', s=s, U=U, V=V)
     
     #==============================================================================    
     if args.plot and all(v is not None for v in [s, U, V]):
+        
+        if args.which == 'nfo':
+            sourcePoints = np.load(str(datadir['sources']))
+        
+            try:
+                sinterval
+            except NameError:
+                sinterval = None
+                
+            if sinterval is None:
+                if Path('window.npz').exists():
+                    sstart = windowDict['sstart']
+                    sstop = windowDict['sstop']
+                    sstep = windowDict['sstep']    
+                else:
+                    sstart = 0
+                    sstop = sourcePoints.shape[0]
+                    sstep = 1
+                
+                sinterval = np.arange(sstart, sstop, sstep)
+                
+            sourcePoints = sourcePoints[sinterval, :]
+            
+        else:
+            # if args.which == 'lso'
+        
+            try:
+                sourcePoints
+            except NameError:
+                sourcePoints = None
+            
+            if sourcePoints is None and Path('VZTestFuncs.npz').exists():
+                TFDict = np.load('VZTestFuncs.npz')
+                sourcePoints = TFDict['samplingPoints']
+                sourcePoints = sourcePoints[:, :-1]
+            else:
+                sys.exit(textwrap.dedent(
+                        '''
+                        Error:
+                        '''))
+            sstart = 0
+            sstop = sourcePoints.shape[0]
+            sstep = 1
+            sinterval = np.arange(sstart, sstop, sstep)
+        
         remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
         
         Nr = receiverPoints.shape[0]

@@ -196,25 +196,25 @@ def cli():
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
         #==============================================================================    
-        if Path(os.path.join(dataPath, 'scatteredData.npy')).exists():
-            scatteredData = os.path.join(dataPath, 'scatteredData.npy')
+        if Path(os.path.join(dataPath, 'recordedData.npy')).exists():
+            recordedData = os.path.join(dataPath, 'recordedData.npy')
         else:
             userResponded = False
             print(textwrap.dedent(
                  '''
-                 Error: Expected file \'scatteredData.npy\' not found. Does a file
-                 exist containing the measured scattered waves? (This is a required file.)
+                 Error: Expected file \'recordedData.npy\' not found. Does a file
+                 exist containing the recorded waves? (This is a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the measured
-                 scattered waves (must be binary NumPy '.npy' format). (Default)
+                 Enter 'y/yes' to specify the filename containing the recorded
+                 waves (must be binary NumPy '.npy' format). (Default)
                  Enter 'n/no' or 'q/quit to exit this program.
                  '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == 'y' or answer == 'yes':
-                    dataFile = input('Please specify the filename containing the measured scattered waves: ')
+                    dataFile = input('Please specify the filename containing the recorded waves: ')
                     if '.npy' in dataFile and Path(os.path.join(dataPath, dataFile)).exists():
-                        scatteredData = os.path.join(dataPath, dataFile)
+                        recordedData = os.path.join(dataPath, dataFile)
                         userResponded = True
                         break
                     elif '.npy' in dataFile and not Path(os.path.join(dataPath, dataFile)).exists():
@@ -308,27 +308,27 @@ def cli():
         
         #==============================================================================  
         if noScatterer and noTestFuncs:
-            files = [receivers, sources, recordingTimes, scatteredData]
+            files = [receivers, sources, recordingTimes, recordedData]
             np.savez('datadir.npz',
                      path = dataPath,
                      files = files,
                      receivers = receivers,
                      sources = sources,
                      recordingTimes = recordingTimes,
-                     scatteredData = scatteredData)
+                     recordedData = recordedData)
         elif noScatterer and not noTestFuncs:
-            files = [receivers, sources, recordingTimes, scatteredData, testFuncs, samplingPoints]
+            files = [receivers, sources, recordingTimes, recordedData, testFuncs, samplingPoints]
             np.savez('datadir.npz',
                      path = dataPath,
                      files = files,
                      receivers = receivers,
                      sources = sources,
                      recordingTimes = recordingTimes,
-                     scatteredData = scatteredData,
+                     recordedData = recordedData,
                      testFuncs = testFuncs,
                      samplingPoints = samplingPoints)
         elif not noScatterer and noTestFuncs:
-            files = [receivers, sources, scatterer, recordingTimes, scatteredData]
+            files = [receivers, sources, scatterer, recordingTimes, recordedData]
             np.savez('datadir.npz',
                      path = dataPath,
                      files = files,
@@ -336,9 +336,9 @@ def cli():
                      sources = sources,
                      scatterer = scatterer,
                      recordingTimes = recordingTimes,
-                     scatteredData = scatteredData)
+                     recordedData = recordedData)
         else:
-            files = [receivers, sources, scatterer, recordingTimes, scatteredData, testFuncs, samplingPoints]
+            files = [receivers, sources, scatterer, recordingTimes, recordedData, testFuncs, samplingPoints]
             np.savez('datadir.npz',
                      path = dataPath,
                      files = files,
@@ -346,6 +346,6 @@ def cli():
                      sources = sources,
                      scatterer = scatterer,
                      recordingTimes = recordingTimes,
-                     scatteredData = scatteredData,
+                     recordedData = recordedData,
                      testFuncs = testFuncs,
                      samplingPoints = samplingPoints)

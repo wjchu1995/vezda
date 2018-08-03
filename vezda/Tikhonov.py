@@ -35,4 +35,4 @@ def Tikhonov(U, s, V, b, alpha):
     Sp = diagsvd(sigma, V.shape[1], U.shape[1])
     
     # Return the Tikhonov-regularized solution
-    return np.dot(V, np.dot(Sp, np.dot(U.T, b)))
+    return V @ (Sp @ (U.T @ b))
