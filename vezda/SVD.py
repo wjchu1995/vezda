@@ -617,7 +617,7 @@ def cli():
     #==============================================================================    
     if args.plot and all(v is not None for v in [s, U, V]):
         
-        if args.which == 'nfo':
+        if args.nfo:
             sourcePoints = np.load(str(datadir['sources']))
         
             try:
@@ -640,7 +640,7 @@ def cli():
             sourcePoints = sourcePoints[sinterval, :]
             
         else:
-            # if args.which == 'lso'
+            # if args.lso
         
             try:
                 sourcePoints
