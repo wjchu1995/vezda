@@ -15,6 +15,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.ticker import FormatStrFormatter
+from skimage import measure
+from pathlib import Path
+from tqdm import trange
 
 #==============================================================================
 # General functions for plotting...
@@ -92,6 +97,12 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.linewidth = 0.95
             ax1.labelcolor = '#4c4c4c'
             ax1.titlecolor = 'black'
+            ax1.receivercolor = 'black'
+            ax1.sourcecolor = 'black'
+            ax1.activesourcecolor = 'darkcyan'
+            ax1.inactivesourcecolor = 'darkgray'
+            ax1.scatterercolor = 'darkgray'
+            ax1.surfacecolor = 'c'
         
         elif mode == 'dark':
             plt.rc('grid', linestyle='solid', color='dimgray')
@@ -114,6 +125,12 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.linewidth = 0.95
             ax1.labelcolor = '555555'
             ax1.titlecolor = '555555'
+            ax1.receivercolor = 'darkgray'
+            ax1.sourcecolor = 'darkgray'
+            ax1.activesourcecolor = 'c'
+            ax1.inactivesourcecolor = 'dimgray'
+            ax1.scatterercolor = 'lightgray'
+            ax1.surfacecolor = 'c'
             
         return fig, ax1
             
@@ -143,6 +160,12 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.linewidth = 0.95
             ax1.labelcolor = '#4c4c4c'
             ax1.titlecolor = 'black'
+            ax1.receivercolor = 'black'
+            ax1.sourcecolor = 'black'
+            ax1.activesourcecolor = 'darkcyan'
+            ax1.inactivesourcecolor = 'darkgray'
+            ax1.scatterercolor = 'darkgray'
+            ax1.surfacecolor = 'c'
             
             ax2.spines['left'].set_color('black')
             ax2.spines['right'].set_color('black')
@@ -156,6 +179,13 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.linewidth = 0.95
             ax2.labelcolor = '#4c4c4c'
             ax2.titlecolor = 'black'
+            ax2.receivercolor = 'black'
+            ax2.sourcecolor = 'black'
+            ax2.activesourcecolor = 'darkcyan'
+            ax2.inactivesourcecolor = 'darkgray'
+            ax2.scatterercolor = 'darkgray'
+            ax2.surfacecolor = 'c'
+            
         
         elif mode == 'dark':
             plt.rc('grid', linestyle='solid', color='dimgray')
@@ -178,6 +208,12 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.linewidth = 0.95
             ax1.labelcolor = '555555'
             ax1.titlecolor = '555555'
+            ax1.receivercolor = 'darkgray'
+            ax1.sourcecolor = 'darkgray'
+            ax1.activesourcecolor = 'c'
+            ax1.inactivesourcecolor = 'dimgray'
+            ax1.scatterercolor = 'lightgray'
+            ax1.surfacecolor = 'c'
             
             ax2.tick_params(colors='555555')
             ax2.set_facecolor('darkslategray')
@@ -193,10 +229,19 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.linewidth = 0.95
             ax2.labelcolor = '555555'
             ax2.titlecolor = '555555'
+            ax2.receivercolor = 'darkgray'
+            ax2.sourcecolor = 'darkgray'
+            ax2.activesourcecolor = 'c'
+            ax2.inactivesourcecolor = 'dimgray'
+            ax2.scatterercolor = 'lightgray'
+            ax2.surfacecolor = 'c'
         
         return fig, ax1, ax2
 
 
+
+#==============================================================================
+# Functions for plotting waveforms...
 def set_ylabel(N, coordinates, pltstart, flag, plotParams):
     '''
     Sets the appropriate y-axis label according to the object being plotted
@@ -277,7 +322,7 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
         ax.set_yticks(interval)                
         ax.set_yticklabels(pltstart + interval)
         plt.setp(ax.get_yticklabels(), visible=True)
-        plt.setp(ax.get_yticklines(),visible=True)
+        plt.setp(ax.get_yticklines(), visible=True)
         
         # rescale all wiggle traces by largest displacement range
         scaleFactor = np.max(np.ptp(X, axis=1))
@@ -335,9 +380,12 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
     return ax
 
 
-
+#==============================================================================
+# Functions for plotting maps and images
 def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams):
-    ax.clear()
+    if index is not None:
+        ax.clear()
+        ax.set_title('Map', color=ax.titlecolor)
     ax.grid(False)
     
     xu = plotParams['xu']
@@ -356,48 +404,84 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
     else:
         ax.set_ylabel(ylabel, color=ax.labelcolor)
     
-    # delete the row corresponding to the current source (plot current source separately)
-    sources = np.delete(sourcePoints, index, axis=0)
-    currentSource = sourcePoints[index, :]
-    
-    if receiverPoints.shape[1] == 2:
-        ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color='k')
+    if index is None:
         
-        if flag == 'data':
-            ax.plot(sources[:, 0], sources[:, 1], '*', color='silver')
-            ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color='darkcyan')
+        if receiverPoints.shape[1] == 2:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
-        elif flag == 'testfunc':
-            ax.plot(sources[:, 0], sources[:, 1], '.', color='silver')
-            ax.plot(currentSource[0], currentSource[1], marker='.', markersize=12, color='darkcyan')
+            if flag == 'data':
+                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '*', color=ax.sourcecolor)
         
-        if scatterer is not None and plotParams['show_scatterer']:
-            ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color='darkgray')
+            elif flag == 'testfunc':
+                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '.', color=ax.sourcecolor)
+        
+            if scatterer is not None and plotParams['show_scatterer']:
+                ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                   
-    elif receiverPoints.shape[1] == 3:
-        ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color='k')
+        elif receiverPoints.shape[1] == 3:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
-        if flag == 'data':
-            ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color='silver')
-            ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color='darkcyan')
+            if flag == 'data':
+                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '*', color=ax.sourcecolor)
         
-        elif flag == 'testfunc':
-            ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '.', color='silver')
-            ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='.', markersize=12, color='darkcyan')
+            elif flag == 'testfunc':
+                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '.', color=ax.sourcecolor)
         
-        if scatterer is not None and plotParams['show_scatterer']:
-            ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color='darkgray')
+            if scatterer is not None and plotParams['show_scatterer']:
+                ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
                 
-        zu = plotParams['zu']
-        zlabel = plotParams['zlabel']
+            zu = plotParams['zu']
+            zlabel = plotParams['zlabel']
         
-        if zu != '':
-            ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
-        else:
-            ax.set_zlabel(zlabel, color=ax.labelcolor)
+            if zu != '':
+                ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+            else:
+                ax.set_zlabel(zlabel, color=ax.labelcolor)
         
-    ax.set_title('Map')
+        
+    else:
+        # delete the row corresponding to the current source (plot current source separately)
+        sources = np.delete(sourcePoints, index, axis=0)
+        currentSource = sourcePoints[index, :]
+    
+        if receiverPoints.shape[1] == 2:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+        
+            if flag == 'data':
+                ax.plot(sources[:, 0], sources[:, 1], '*', color=ax.inactivesourcecolor)
+                ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color=ax.activesourcecolor)
+        
+            elif flag == 'testfunc':
+                ax.plot(sources[:, 0], sources[:, 1], '.', color=ax.inactivesourcecolor)
+                ax.plot(currentSource[0], currentSource[1], marker='.', markersize=12, color=ax.activesourcecolor)
+        
+            if scatterer is not None and plotParams['show_scatterer']:
+                ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
+                
+                  
+        elif receiverPoints.shape[1] == 3:
+            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+        
+            if flag == 'data':
+                ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color=ax.inactivesourcecolor)
+                ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color=ax.activesourcecolor)
+        
+            elif flag == 'testfunc':
+                ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '.', color=ax.inactivesourcecolor)
+                ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='.', markersize=12, color=ax.activesourcecolor)
+        
+            if scatterer is not None and plotParams['show_scatterer']:
+                ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
+                
+            zu = plotParams['zu']
+            zlabel = plotParams['zlabel']
+        
+            if zu != '':
+                ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+            else:
+                ax.set_zlabel(zlabel, color=ax.labelcolor)
+        
     ax.set_aspect('equal')
     
     if plotParams['invert_xaxis']:
@@ -412,7 +496,228 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
     return ax
 
 
+def isosurface(volume, level, x1, x2, x3):
+    
+    verts, faces, normals, values = measure.marching_cubes_lewiner(volume, level=level)
+    
+    # Rescale coordinates of vertices to lie within x,y,z ranges
+    verts[:, 0] = verts[:, 0] * (x1[-1] - x1[0]) / (np.max(verts[:, 0]) - np.min(verts[:, 0])) + x1[0]
+    verts[:, 1] = verts[:, 1] * (x2[-1] - x2[0]) / (np.max(verts[:, 1]) - np.min(verts[:, 1])) + x2[0]
+    verts[:, 2] = verts[:, 2] * (x3[-1] - x3[0]) / (np.max(verts[:, 2]) - np.min(verts[:, 2])) + x3[0]
+    
+    return verts, faces
+    
 
+def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
+    ax.clear()
+    ax.grid(False)
+    
+    xu = plotParams['xu']
+    xlabel = plotParams['xlabel']
+    
+    yu = plotParams['yu']
+    ylabel= plotParams['ylabel']
+    
+    if xu != '':
+        ax.set_xlabel(xlabel + ' (%s)' %(xu), color=ax.labelcolor)
+    else:
+        ax.set_xlabel(xlabel, color=ax.labelcolor)
+        
+    if yu != '':
+        ax.set_ylabel(ylabel + ' (%s)' %(yu), color=ax.labelcolor)
+    else:
+        ax.set_ylabel(ylabel, color=ax.labelcolor)
+    
+    tu = plotParams['tu']
+    
+    if Z is None:
+        colormap = plt.get_cmap(plotParams['colormap'])
+        im = ax.contourf(X, Y, volume, 100, cmap=colormap)
+        if plotParams['colorbar']:
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes('right', size='5%', pad=0.05)
+            cbar = plt.colorbar(im, cax=cax)                
+            cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            cbar.set_label(r'$\frac{1}{\vert\vert\varphi\vert\vert}$',
+                           labelpad=24, rotation=0, fontsize=18, color=ax.labelcolor)
+        
+        if alpha != 0:
+            title = r'$\alpha = %0.1e$' %(alpha)
+        else:
+            title = r'$\alpha = %s$' %(alpha)
+    
+        if tau is not None:
+            if tu != '':
+                title += r', $\tau = %0.2f$ %s' %(tau, tu)
+            else:
+                title += r', $\tau = %0.2f$' %(tau)
+                
+    else:
+        x = X[:, 0, 0]
+        y = Y[0, :, 0]
+        z = Z[0, 0, :]
+        
+        isolevel = plotParams['isolevel']
+        
+        # Plot isosurface of support of source function in space
+        verts, faces = isosurface(volume, isolevel, x, y, z)
+        ax.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], color=ax.surfacecolor)
+                
+        zu = plotParams['zu']
+        zlabel = plotParams['zlabel']
+        
+        if zu != '':
+            ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+        else:
+            ax.set_zlabel(zlabel, color=ax.labelcolor)
+        
+        if alpha != 0:
+            title = r'Isosurface @ %s [$\alpha = %0.1e$]' %(isolevel, alpha)
+        else:
+            title = r'Isosurface @ %s [$\alpha = %s$]' %(isolevel, alpha)
+    
+        if tau is not None:
+            if tu != '':
+                title = title[:-1] + r', $\tau = %0.2f %s]' %(tau, tu)
+            else:
+                title = title[:-1] + r', $\tau = %0.2f]' %(tau)
+        
+    ax.set_title(title, color=ax.titlecolor)
+    ax.set_aspect('equal')
+    
+    if plotParams['invert_xaxis']:
+        ax.invert_xaxis()
+    
+    if plotParams['invert_yaxis']:
+        ax.invert_yaxis()
+    
+    if plotParams['invert_zaxis']:
+        ax.invert_zaxis()
+        
+    return ax
+
+
+def plotImage(Dict, plotParams, flag, spacetime=False, movie=False):
+    if 'Z' in Dict:
+        Z = Dict['Z']        
+        fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3) 
+    else:
+        Z = None
+        fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=2)
+    
+    X = Dict['X']
+    Y = Dict['Y']
+    Image = Dict['Image']
+    alpha = Dict['alpha']
+    
+    if 'tau' in Dict:
+        tau = Dict['tau']
+        if len(tau) == 1:
+            image_viewer(ax1, Image, plotParams, alpha, X, Y, Z, tau[0])
+        else:
+            image_viewer(ax1, Image, plotParams, alpha, X, Y, Z)
+    else:
+        tau = None
+        image_viewer(ax1, Image, plotParams, alpha, X, Y, Z)
+    
+        
+    if flag == 'telsm' and spacetime:
+        x = X[:, 0]
+        y = Y[0, :]
+        
+        if Z is None:
+            if tau is not None and len(tau) > 1:
+                # Create a second figure to plot 2D sections of Histogram
+                Histogram = Dict['Histogram']
+                fig2, ax2 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=2)
+                ax2.volume = Histogram
+                ax2.index = len(tau) // 2
+                image_viewer(ax2, Histogram[:, :, ax2.index], plotParams, alpha,
+                             X, Y, Z, tau[ax2.index])
+            
+                
+                # Create a third figure to plot isosurface of support of source function in space-time
+                SpaceTimeVolume = np.swapaxes(Histogram, 1, 2)
+                verts, faces = isosurface(SpaceTimeVolume, plotParams['isolevel'], x, tau, y)
+                
+                fig3, ax3 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3)
+                ax3.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], color=ax3.surfacecolor)
+                ax3.view_init(elev=10, azim=340)
+                if alpha != 0:
+                    ax3.set_title(r'Isosurface @ %s [$\alpha = %0.1e$]' %(plotParams['isolevel'], alpha), color=ax3.titlecolor)
+                else:
+                    ax3.set_title(r'Isosurface @ %s [$\alpha = %s$]' %(plotParams['isolevel'], alpha), color=ax3.titlecolor)
+                
+                
+                xlabel = plotParams['xlabel']
+                xu = plotParams['xu']
+                if xu != '':
+                    ax3.set_xlabel(xlabel + ' (%s)' %(xu), color=ax3.labelcolor)
+                else:
+                    ax3.set_xlabel(xlabel, color=ax3.labelcolor)
+                
+                
+                ylabel = plotParams['ylabel']
+                yu = plotParams['yu']
+                if plotParams['yu'] != '':
+                    ax3.set_zlabel(ylabel + ' (%s)' %(yu), color=ax3.labelcolor)
+                else:
+                    ax3.set_zlabel(ylabel, color=ax3.labelcolor)
+                
+                
+                tu = plotParams['tu']
+                if plotParams['tu'] != '':
+                    ax3.set_ylabel(r'$\tau$ (%s)' %(tu), color=ax3.labelcolor)
+                else:
+                    ax3.set_ylabel(r'$\tau$', color=ax3.labelcolor)
+                
+                # y-axis is taken to be the 'vertical space' axis in 2D space.
+                # In the corresponding space-time figure, to maintain that the
+                # second space dimension is vertical, the y-axis is now the
+                # z-axis, and time (tau) is on the y-axis of the 3D figure.
+                if plotParams['invert_yaxis']:
+                    ax3.invert_zaxis()
+                    
+                if plotParams['invert_xaxis']:
+                    ax3.invert_xaxis()
+                
+                if movie:
+                    if not Path('./movie').exists():
+                        Path('./movie').mkdir(parents=True, exist_ok=True)
+                        for angle in trange(360, desc='Saving movie frames'):
+                            ax3.view_init(elev=10, azim=angle)
+                            fig3.savefig('./movie/movie%d' % angle + '.' + plotParams['pltformat'],
+                                         format=plotParams['pltformat'])
+                            
+                return fig1, ax1, fig2, ax2, fig3, ax3
+            
+            else:
+                
+                return fig1, ax1
+                        
+        else:
+        
+            if tau is not None and len(tau) > 1:
+                # Plot isosurface of support of source function in space-time
+                Histogram = Dict['Histogram']
+                fig2, ax2 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3)
+                ax2.volume = Histogram
+                ax2.index = len(tau) // 2
+                ax2.set_aspect('equal')
+                image_viewer(ax2, Histogram[:, :, :, ax2.index], plotParams,
+                             alpha, X, Y, Z, tau[ax2.index])
+                
+                return fig1, ax1, fig2, ax2
+            
+            else:
+                
+                return fig1, ax1
+        
+    else:
+        
+        return fig1, ax1
+        
+        
 #==============================================================================
 # General functions for interactive plotting...
 
@@ -447,10 +752,9 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
     plotParams: a dictionary of plot parameters for styling
     '''
     
-    # get units for x,y,z axes from plotParams
+    # get units for x,y axes from plotParams
     xu = plotParams['xu']
     yu = plotParams['yu']
-    zu = plotParams['zu']
     
     if sourcePoints.shape[1] == 2:
         if flag == 'data':
@@ -480,6 +784,9 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
                                                             sourcePoints[index, 1])
                     
     elif sourcePoints.shape[1] == 3:
+        # get units for z axis from plotParams
+        zu = plotParams['zu']
+        
         if flag == 'data':
             # get type-specific title from plotParams
             data_title = plotParams['data_title']
@@ -664,3 +971,39 @@ def previous_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plo
     title = vector_title(flag, ax.index)
     plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, interval,
                 coordinates, title, flag, plotParams)
+    
+    
+
+#==============================================================================
+# Specific functions for plotting images...    
+def process_key_images(event, plotParams, alpha, X, Y, Z, Ntau, tau):
+    fig = event.canvas.figure
+    ax = fig.axes[0]
+    
+    if event.key == 'left' or event.key == 'down':
+        previous_image(ax, plotParams, alpha, X, Y, Z, Ntau, tau)
+    
+    elif event.key == 'right' or event.key == 'up':
+        next_image(ax, plotParams, alpha, X, Y, Z, Ntau, tau)
+    
+    fig.canvas.draw()
+
+def previous_image(ax, plotParams, alpha, X, Y, Z, Ntau, tau):
+    volume = ax.volume
+    ax.index = (ax.index - 1) % Ntau  # wrap around using %
+    if Z is None:
+        image_viewer(ax, volume[:, :, ax.index], plotParams,
+                     alpha, X, Y, Z, tau[ax.index])
+    else:
+        image_viewer(ax, volume[:, :, :, ax.index], plotParams,
+                     alpha, X, Y, Z, tau[ax.index])
+    
+def next_image(ax, plotParams, alpha, X, Y, Z, Ntau, tau):
+    volume = ax.volume
+    ax.index = (ax.index + 1) % Ntau  # wrap around using %
+    if Z is None:
+        image_viewer(ax, volume[:, :, ax.index], plotParams,
+                     alpha, X, Y, Z, tau[ax.index])
+    else:
+        image_viewer(ax, volume[:, :, :, ax.index], plotParams,
+                     alpha, X, Y, Z, tau[ax.index])

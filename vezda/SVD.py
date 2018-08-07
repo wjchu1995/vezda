@@ -175,7 +175,7 @@ def cli():
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
         
@@ -214,7 +214,7 @@ def cli():
                     userResponded = True
                     break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
     
@@ -250,7 +250,7 @@ def cli():
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
         
@@ -289,7 +289,7 @@ def cli():
                     userResponded = True
                     break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 
@@ -338,7 +338,7 @@ def cli():
                     userResponded = True
                     break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
     
@@ -364,7 +364,7 @@ def cli():
                 else:
                     break
             elif answer == 'q' or answer == 'quit':
-                sys.exit('Exiting program.')
+                sys.exit('Exiting program.\n')
             else:
                 print('Invalid response. Please enter \'1\', or \'q/quit\'.')
         
@@ -404,7 +404,7 @@ def cli():
                     userResponded = True
                     break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 

@@ -53,7 +53,7 @@ def cli():
                         ps, eps, and svg. Default format is set to pdf.''')
     parser.add_argument('--mode', type=str, choices=['light', 'dark'], required=False,
                         help='''Specify whether to view plots in light mode for daytime viewing
-                        or dark mode for night viewing.
+                        or dark mode for nighttime viewing.
                         Mode must be either \'light\' or \'dark\'.''')
     args = parser.parse_args()
     #==============================================================================

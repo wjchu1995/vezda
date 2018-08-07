@@ -54,10 +54,10 @@ def cli():
         # Left vectors are columns of U
         # Right vectors are columns of V
         
-        dataSVD = np.load('NFO_SVD.npz')
-        s = dataSVD['s']
-        U = dataSVD['U']
-        V = dataSVD['V']
+        SVD = np.load('NFO_SVD.npz')
+        s = SVD['s']
+        U = SVD['U']
+        V = SVD['V']
         
         vezda.TELSM.solver(args.medium, s, U, V, alpha)
         
@@ -68,9 +68,9 @@ def cli():
         # Left vectors are columns of U
         # Right vectors are columns of V
         
-        testFuncSVD = np.load('LSO_SVD.npz')
-        s = testFuncSVD['s']
-        U = testFuncSVD['U']
-        V = testFuncSVD['V']
+        SVD = np.load('LSO_SVD.npz')
+        s = SVD['s']
+        U = SVD['U']
+        V = SVD['V']
         
         vezda.CLSM.solver(s, U, V, alpha)

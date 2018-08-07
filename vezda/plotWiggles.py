@@ -46,7 +46,7 @@ def cli():
                         be shown if available.''')
     parser.add_argument('--mode', type=str, choices=['light', 'dark'], required=False,
                         help='''Specify whether to view plots in light mode for daytime viewing
-                        or dark mode for night viewing.
+                        or dark mode for nighttime viewing.
                         Mode must be either \'light\' or \'dark\'.''')
     
     args = parser.parse_args()
@@ -105,7 +105,7 @@ def cli():
     if args.type == 'data':
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
-        X = np.load(str(datadir['scatteredData']))
+        X = np.load(str(datadir['recordedData']))
         time = recordingTimes
         sourcePoints = np.load(str(datadir['sources']))
         

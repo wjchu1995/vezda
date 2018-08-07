@@ -17,6 +17,7 @@ import sys
 import argparse
 import textwrap
 import numpy as np
+from pathlib import Path
 
 
 def cli():
@@ -66,13 +67,14 @@ def cli():
                         (e.g., --step=2 will use every other source in the window.''')
                         
     args = parser.parse_args()    
-    
-    try:
-        datadir = np.load('datadir.npz')
-    except FileNotFoundError:
-        datadir = None
         
-    if datadir is None:
+    if Path('datadir.npz').exists():
+        datadir = np.load('datadir.npz')
+        recordingTimes = np.load(str(datadir['recordingTimes']))
+        receivers = np.load(str(datadir['receivers']))
+        sources = np.load(str(datadir['sources']))
+    
+    else:
         sys.exit(textwrap.dedent(
                 '''
                 Error: A relative path to the data directory from the current 
@@ -83,10 +85,6 @@ def cli():
                     
                 from the command line.
                 '''))
-    else:
-        recordingTimes = np.load(str(datadir['recordingTimes']))
-        receivers = np.load(str(datadir['receivers']))
-        sources = np.load(str(datadir['sources']))
             
     try:
         windowDict = np.load('window.npz')
@@ -140,7 +138,7 @@ def cli():
             
         #==============================================================================
         # set/update the time window
-        if args.time is None and args.tstart is None and args.tstop is None and args.tstep is None:
+        if all(v is None for v in [args.time, args.tstart, args.tstop, args.tstep]):
             if windowDict is None:
                 tstart = recordingTimes[0]
                 tstop = recordingTimes[-1]
@@ -150,7 +148,7 @@ def cli():
                 tstop = windowDict['tstop']
                 tstep = windowDict['tstep']
             
-        elif args.time is not None and args.tstart is None and args.tstop is None and args.tstep is None:
+        elif args.time is not None and all(v is None for v in [args.tstart, args.tstop, args.tstep]):
             time = args.time.split(',')
             if len(time) != 3:
                 sys.exit(textwrap.dedent(
@@ -187,7 +185,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
             
-        elif args.time is None and args.tstart is not None and args.tstop is not None and args.tstep is not None:
+        elif args.time is None and all(v is not None for v in [args.tstart, args.tstop, args.tstep]):
             if recordingTimes[0] <= args.tstart and args.tstart < args.tstop and args.tstop <= recordingTimes[-1] and args.tstep > 0:
                 tstart = args.tstart
                 tstop = args.tstop
@@ -217,7 +215,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.time is None and args.tstart is None and args.tstop is not None and args.tstep is not None:
+        elif all(v is None for v in [args.time, args.tstart]) and all(v is not None for v in [args.tstop, args.tstep]):
             if recordingTimes[0] < args.tstop and args.tstop <= recordingTimes[-1] and args.tstep > 0:
                 tstop = args.tstop
                 tstep = args.tstep
@@ -238,7 +236,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.time is None and args.tstart is not None and args.tstop is None and args.tstep is not None:
+        elif all(v is None for v in [args.time, args.tstop]) and all(v is not None for v in [args.tstart, args.tstep]):
             if recordingTimes[0] <= args.tstart and args.tstart < recordingTimes[-1] and args.tstep > 0:
                 tstart = args.tstart
                 tstep = args.tstep
@@ -259,7 +257,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.time is None and args.tstart is not None and args.tstop is not None and args.tstep is None:
+        elif all(v is None for v in [args.time, args.step]) and all(v is not None for v in [args.tstart, args.tstop]):
             if recordingTimes[0] <= args.tstart and args.tstart < args.tstop and args.tstop <= recordingTimes[-1]:
                 tstart = args.tstart
                 tstop = args.tstop
@@ -286,7 +284,7 @@ def cli():
                         the recorded time interval (%s, %s).
                         ''' %(recordingTimes[0], recordingTimes[-1])))
 
-        elif args.time is None and args.tstart is not None and args.tstop is None and args.tstep is None:
+        elif all(v is None for v in [args.time, args.tstop, args.tstep]) and args.tstart is not None:
             if recordingTimes[0] <= args.tstart and args.tstart < recordingTimes[-1]:
                 tstart = args.tstart
                 if windowDict is None:
@@ -302,7 +300,7 @@ def cli():
                         the recorded time interval (%s, %s).
                         ''' %(recordingTimes[0], recordingTimes[-1])))
 
-        elif args.time is None and args.tstart is None and args.tstop is not None and args.tstep is None:
+        elif all(v is None for v in [args.time, args.tstart, args.tstep]) and args.tstop is not None:
             if recordingTimes[0] < args.tstop and args.tstop <= recordingTimes[-1]:
                 tstop = args.tstop
                 if windowDict is None:
@@ -318,7 +316,7 @@ def cli():
                         the recorded time interval (%s, %s).
                         ''' %(recordingTimes[0], recordingTimes[-1])))
     
-        elif args.time is None and args.tstart is None and args.tstop is None and args.tstep is not None:
+        elif all(v is None for v in [args.time, args.tstart, args.tstop]) and args.tstep is not None:
             if args.tstep > 0:
                 tstep = args.tstep
                 if windowDict is None:
@@ -334,21 +332,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.time is not None and args.tstart is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --time together with any of --tstart/tstop/tstep.
-                    Must use either --time by itself or a combination of --tstart/tstop/tstep.
-                    '''))
-    
-        elif args.time is not None and args.tstop is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --time together with any of --tstart/tstop/tstep.
-                    Must use either --time by itself or a combination of --tstart/tstop/tstep.
-                    '''))
-    
-        elif args.time is not None and args.tstep is not None:
+        elif args.time is not None and any(v is not None for v in [args.tstart, args.tstop, args.tstep]):
             sys.exit(textwrap.dedent(
                     '''
                     Error: Cannot use --time together with any of --tstart/tstop/tstep.
@@ -357,7 +341,7 @@ def cli():
     
         #==============================================================================
         # set/update the source window
-        if args.sources is None and args.sstart is None and args.sstop is None and args.sstep is None:
+        if all(v is None for v in [args.sources, args.sstart, args.sstop, args.sstep]):
             if windowDict is None:
                 sstart = 0
                 sstop = sources.shape[0]
@@ -367,7 +351,7 @@ def cli():
                 sstop = windowDict['sstop']
                 sstep = windowDict['sstep']
                 
-        elif args.sources is not None and args.sstart is None and args.sstop is None and args.sstep is None:
+        elif args.sources is not None and all(v is None for v in [args.sstart, args.sstop, args.sstep]):
             userSources = args.sources.split(',')
             if len(userSources) != 3:
                 sys.exit(textwrap.dedent(
@@ -404,7 +388,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.sources is None and args.sstart is not None and args.sstop is not None and args.sstep is not None:
+        elif args.sources is None and all(v is not None for v in [args.sstart, args.sstop, args.sstep]):
             if 0 <= args.sstart and args.sstart < args.sstop and args.sstop <= sources.shape[0] and args.sstep > 0:
                 sstart = args.sstart
                 sstop = args.sstop
@@ -434,7 +418,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
             
-        elif args.sources is None and args.sstart is None and args.sstop is not None and args.sstep is not None:
+        elif all(v is None for v in [args.sources, args.sstart]) and all(v is not None for v in [args.sstop, args.sstep]):
             if 0 < args.sstop and args.sstop <= sources.shape[0] and args.sstep > 0:
                 sstop = args.sstop
                 sstep = args.sstep
@@ -455,7 +439,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
     
-        elif args.sources is None and args.sstart is not None and args.sstop is None and args.sstep is not None:
+        elif all(v is None for v in [args.sources, args.sstop]) and all(v is not None for v in [args.sstart, args.sstep]):
             if 0 <= args.sstart and args.sstart < sources.shape[0] and args.sstep > 0:
                 sstart = args.sstart
                 sstep = args.sstep
@@ -476,7 +460,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
             
-        elif args.sources is None and args.sstart is not None and args.sstop is not None and args.sstep is None:
+        elif all(v is None for v in [args.sources, args.sstep]) and all(v is not None for v in [args.sstart, args.sstop]):
             if 0 <= args.sstart and args.sstart < args.sstop and args.sstop <= sources.shape[0]:
                 sstart = args.sstart
                 sstop = args.sstop
@@ -503,7 +487,7 @@ def cli():
                         the range of sources (%s, %s).
                         ''' %(0, sources.shape[0])))
 
-        elif args.sources is None and args.sstart is not None and args.sstop is None and args.sstep is None:
+        elif all(v is None for v in [args.sources, args.sstop, args.sstep]) and args.sstart is not None:
             if 0 <= args.sstart and args.sstart < sources.shape[0]:
                 sstart = args.sstart
                 if windowDict is None:
@@ -519,7 +503,7 @@ def cli():
                         the range of sources (%s, %s).
                         ''' %(0, sources.shape[0])))
     
-        elif args.sources is None and args.sstart is None and args.sstop is not None and args.sstep is None:
+        elif all(v is None for v in [args.sources, args.sstart, args.sstep]) and args.sstop is not None:
             if 0 <= args.sstop and args.sstop < sources.shape[0]:
                 sstop = args.sstop
                 if windowDict is None:
@@ -535,7 +519,7 @@ def cli():
                         the range of sources (%s, %s).
                         ''' %(0, sources.shape[0])))
     
-        elif args.sources is None and args.sstart is None and args.sstop is None and args.sstep is not None:
+        elif all(v is None for v in [args.sources, args.sstart, args.sstop]) and args.sstep is not None:
             if args.sstep > 0:
                 sstep = args.sstep
                 if windowDict is None:
@@ -551,30 +535,16 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.sources is not None and args.sstart is not None:
+        elif args.sources is not None and any(v is not None for v in [args.sstart, args.sstop, args.sstep]):
             sys.exit(textwrap.dedent(
                     '''
                     Error: Cannot use --sources together with any of --sstart/sstop/sstep.
                     Must use either --sources by itself or a combination of --sstart/sstop/sstep.
-                    '''))
-    
-        elif args.sources is not None and args.sstop is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --sources together with any of --sstart/sstop/sstep.
-                    Must use either --sources by itself or a combination of --sstart/sstop/sstep.
-                    '''))
-    
-        elif args.sources is not None and args.sstep is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --sources together with any of --sstart/sstop/sstep.
-                    Must use either --sourcces by itself or a combination of --sstart/sstop/sstep.
                     '''))
     
         #==============================================================================
         # set/update the receiver window
-        if args.receivers is None and args.rstart is None and args.rstop is None and args.rstep is None:
+        if all(v is None for v in [args.receivers, args.rstart, args.rstop, args.rstep]):
             if windowDict is None:
                 rstart = 0
                 rstop = receivers.shape[0]
@@ -584,7 +554,7 @@ def cli():
                 rstop = windowDict['rstop']
                 rstep = windowDict['rstep']
                 
-        elif args.receivers is not None and args.rstart is None and args.rstop is None and args.rstep is None:
+        elif args.receivers is not None and all(v is None for v in [args.rstart, args.rstop, args.rstep]):
             userReceivers = args.receivers.split(',')
             if len(userReceivers) != 3:
                 sys.exit(textwrap.dedent(
@@ -621,7 +591,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
             
-        elif args.receivers is None and args.rstart is not None and args.rstop is not None and args.rstep is not None:
+        elif args.receivers is None and all(v is not None for v in [args.rstart, args.rstop, args.rstep]):
             if 0 <= args.rstart and args.rstart < args.rstop and args.rstop <= receivers.shape[0] and args.rstep > 0:
                 rstart = args.rstart
                 rstop = args.rstop
@@ -651,7 +621,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.receivers is None and args.rstart is None and args.rstop is not None and args.rstep is not None:
+        elif all(v is None for v in [args.receivers, args.rstart]) and all(v is not None for v in [args.rstop, args.rstep]):
             if 0 < args.rstop and args.rstop <= receivers.shape[0] and args.rstep > 0:
                 rstop = args.rstop
                 rstep = args.rstep
@@ -672,7 +642,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
     
-        elif args.receivers is None and args.rstart is not None and args.rstop is None and args.rstep is not None:
+        elif all(v is None for v in [args.receivers, args.rstop]) and all(v is not None for v in [args.rstart, args.rstep]):
             if 0 <= args.rstart and args.rstart < receivers.shape[0] and args.rstep > 0:
                 rstart = args.rstart
                 rstep = args.rstep
@@ -693,7 +663,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
             
-        elif args.receivers is None and args.rstart is not None and args.rstop is not None and args.rstep is None:
+        elif all(v is None for v in [args.receivers, args.rstep]) and all(v is not None for v in [args.rstart, args.rstop]):
             if 0 <= args.rstart and args.rstart < args.rstop and args.rstop <= receivers.shape[0]:
                 rstart = args.rstart
                 rstop = args.rstop
@@ -720,7 +690,7 @@ def cli():
                         the range of receivers (%s, %s).
                         ''' %(0, receivers.shape[0])))
     
-        elif args.receivers == None and args.rstart != None and args.rstop == None and args.rstep == None:
+        elif all(v is None for v in [args.receivers, args.rstop, args.rstep]) and args.rstart is not None:
             if 0 <= args.rstart and args.rstart < receivers.shape[0]:
                 rstart = args.rstart
                 if windowDict is None:
@@ -736,7 +706,7 @@ def cli():
                         the range of receivers (%s, %s).
                         ''' %(0, receivers.shape[0])))
     
-        elif args.receivers == None and args.rstart == None and args.rstop != None and args.rstep == None:
+        elif all(v is None for v in [args.receivers, args.rstart, args.rstep]) and args.rstop is not None:
             if 0 <= args.rstop and args.rstop < receivers.shape[0]:
                 rstop = args.rstop
                 if windowDict is None:
@@ -752,7 +722,7 @@ def cli():
                         the range of receivers (%s, %s).
                         ''' %(0, receivers.shape[0])))
     
-        elif args.receivers is None and args.rstart is None and args.rstop is None and args.rstep is not None:
+        elif all(v is None for v in [args.receivers, args.rstart, args.rstop]) and args.rstep is not None:
             if args.rstep > 0:
                 rstep = args.rstep
                 if windowDict is None:
@@ -768,21 +738,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif args.receivers is not None and args.rstart is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
-                    Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
-                    '''))
-
-        elif args.receivers is not None and args.rstop is not None:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Error: Cannot use --receivers together with any of --rstart/rstop/rstep.
-                    Must use either --receivers by itself or a combination of --rstart/rstop/rstep.
-                    '''))
-        
-        elif args.receivers is not None and args.rstep is not None:
+        elif args.receivers is not None and any(v is not None for v in [args.rstart, args.rstop, args.rstep]):
             sys.exit(textwrap.dedent(
                     '''
                     Error: Cannot use --receivers together with any of --rstart/rstop/rstep.

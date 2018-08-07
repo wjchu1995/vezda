@@ -129,7 +129,6 @@ def solver(s, U, V, alpha):
         # Apply concurrent linear sampling method to three-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
-        tau = samplingGrid['tau']
         
         # Get number of sampling points in space
         Nx = len(x)
@@ -174,8 +173,8 @@ def solver(s, U, V, alpha):
             Image /= Ns
             Image = np.sqrt(Image)
             
-        np.savez('image.npz', ndspace=2, Image=Image, Histogram=Histogram,
-                 alpha=alpha, X=X, Y=Y, tau=tau)
+        np.savez('imageCLSM.npz', Image=Image, Histogram=Histogram,
+                 alpha=alpha, X=X, Y=Y)
     
     #==============================================================================    
     elif int(samplingGrid['ndspace']) == 3:
@@ -183,7 +182,6 @@ def solver(s, U, V, alpha):
         x = samplingGrid['x']
         y = samplingGrid['y']
         z = samplingGrid['z']
-        tau = samplingGrid['tau']
         
         # Get number of sampling points in space
         Nx = len(x)
@@ -229,5 +227,5 @@ def solver(s, U, V, alpha):
             Image /= Ns
             Image = np.sqrt(Image)
             
-        np.savez('imageCLSM.npz', ndspace=3, Image=Image, Histogram=Histogram,
-                 alpha=alpha, X=X, Y=Y, Z=Z, tau=tau)
+        np.savez('imageCLSM.npz', Image=Image, Histogram=Histogram,
+                 alpha=alpha, X=X, Y=Y, Z=Z)
