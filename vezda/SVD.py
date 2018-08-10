@@ -141,7 +141,7 @@ def cli():
                 
                     vzsvd --lso
                     
-                for the Lippman-Schwinger operator.
+                for the Lippmann-Schwinger operator.
                 '''))
     
     #==============================================================================
@@ -448,6 +448,7 @@ def cli():
         
         twStart = 0
         twStop = len(recordingTimes)
+        tstep = 1
                 
     # Apply the receiver window
     rinterval = np.arange(rstart, rstop, rstep)
@@ -617,7 +618,7 @@ def cli():
     #==============================================================================    
     if args.plot and all(v is not None for v in [s, U, V]):
         
-        if args.nfo:
+        if args.nfo:    # Near-field operator
             sourcePoints = np.load(str(datadir['sources']))
         
             try:
@@ -640,22 +641,26 @@ def cli():
             sourcePoints = sourcePoints[sinterval, :]
             
         else:
-            # if args.lso
+            # if args.lso (Lippmann-Schwinger operator)
         
             try:
                 sourcePoints
             except NameError:
                 sourcePoints = None
             
-            if sourcePoints is None and Path('VZTestFuncs.npz').exists():
-                TFDict = np.load('VZTestFuncs.npz')
-                sourcePoints = TFDict['samplingPoints']
-                sourcePoints = sourcePoints[:, :-1]
-            else:
-                sys.exit(textwrap.dedent(
-                        '''
-                        Error:
-                        '''))
+            if sourcePoints is None:
+                if Path('VZTestFuncs.npz').exists():
+                    TFDict = np.load('VZTestFuncs.npz')
+                    sourcePoints = TFDict['samplingPoints']
+                    sourcePoints = sourcePoints[:, :-1]
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            Error: A sampling grid must exist and test functions computed
+                            before a singular-value decomposition of the Lippmann-Schwinger
+                            operator can be computed or plotted.
+                            '''))
+                        
             sstart = 0
             sstop = sourcePoints.shape[0]
             sstep = 1

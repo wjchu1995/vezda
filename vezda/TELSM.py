@@ -139,7 +139,7 @@ def solver(medium, s, U, V, alpha):
                 sampling grid.
                 '''))
     
-    if int(samplingGrid['ndspace']) == 2:
+    if 'z' not in samplingGrid:
         # Apply total-energy linear sampling method to three-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
@@ -515,7 +515,7 @@ def solver(medium, s, U, V, alpha):
                  alpha=alpha, X=X, Y=Y, tau=tau)
     
     #==============================================================================    
-    elif int(samplingGrid['ndspace']) == 3:
+    else:
         # Apply total-energy linear sampling method to four-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']

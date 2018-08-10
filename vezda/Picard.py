@@ -123,7 +123,7 @@ def cli():
     TF = TFarray[:, :, 0, 0]
     Nr, Nt = TF.shape
     b = np.reshape(TF, (Nt * Nr, 1))
-    c = np.abs(np.dot(U.T, b))
+    c = np.abs(U.T @ b)
     d = np.divide(c, s)
     
     #==============================================================================

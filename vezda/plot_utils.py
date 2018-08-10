@@ -359,7 +359,7 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
     if flag == 'data' and (time[0] != t0 or time[-1] != tf):
         # For data plots, the full recording time is always plotted.
         # In this case, t0 and tf denote the beginning and end of a
-        # time window. The time window of the interest is highlighted
+        # time window. The time window of interest is highlighted
         # while the rest of the time axis is shaded.
         ax.axvspan(time[0], t0, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
         ax.axvspan(tf, time[-1], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
@@ -383,27 +383,6 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
 #==============================================================================
 # Functions for plotting maps and images
 def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams):
-    if index is not None:
-        ax.clear()
-        ax.set_title('Map', color=ax.titlecolor)
-    ax.grid(False)
-    
-    xu = plotParams['xu']
-    xlabel = plotParams['xlabel']
-    
-    yu = plotParams['yu']
-    ylabel = plotParams['ylabel']
-    
-    if xu != '':
-        ax.set_xlabel(xlabel + ' (%s)' %(xu), color=ax.labelcolor)
-    else:
-        ax.set_xlabel(xlabel, color=ax.labelcolor)
-        
-    if yu != '':
-        ax.set_ylabel(ylabel + ' (%s)' %(yu), color=ax.labelcolor)
-    else:
-        ax.set_ylabel(ylabel, color=ax.labelcolor)
-    
     if index is None:
         
         if receiverPoints.shape[1] == 2:
@@ -438,9 +417,11 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
                 ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
             else:
                 ax.set_zlabel(zlabel, color=ax.labelcolor)
-        
-        
+         
     else:
+        ax.clear()
+        ax.set_title('Map', color=ax.titlecolor)
+        
         # delete the row corresponding to the current source (plot current source separately)
         sources = np.delete(sourcePoints, index, axis=0)
         currentSource = sourcePoints[index, :]
@@ -481,17 +462,34 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
                 ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
             else:
                 ax.set_zlabel(zlabel, color=ax.labelcolor)
+                
+            if plotParams['invert_zaxis']:
+                ax.invert_zaxis()
         
+    ax.grid(False)
     ax.set_aspect('equal')
+    
+    xu = plotParams['xu']
+    xlabel = plotParams['xlabel']
+    
+    yu = plotParams['yu']
+    ylabel = plotParams['ylabel']
+    
+    if xu != '':
+        ax.set_xlabel(xlabel + ' (%s)' %(xu), color=ax.labelcolor)
+    else:
+        ax.set_xlabel(xlabel, color=ax.labelcolor)
+        
+    if yu != '':
+        ax.set_ylabel(ylabel + ' (%s)' %(yu), color=ax.labelcolor)
+    else:
+        ax.set_ylabel(ylabel, color=ax.labelcolor)
     
     if plotParams['invert_xaxis']:
         ax.invert_xaxis()
     
     if plotParams['invert_yaxis']:
         ax.invert_yaxis()
-    
-    if plotParams['invert_zaxis']:
-        ax.invert_zaxis()
     
     return ax
 
@@ -583,16 +581,6 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
                 title = title[:-1] + r', $\tau = %0.2f]' %(tau)
         
     ax.set_title(title, color=ax.titlecolor)
-    ax.set_aspect('equal')
-    
-    if plotParams['invert_xaxis']:
-        ax.invert_xaxis()
-    
-    if plotParams['invert_yaxis']:
-        ax.invert_yaxis()
-    
-    if plotParams['invert_zaxis']:
-        ax.invert_zaxis()
         
     return ax
 
@@ -634,6 +622,16 @@ def plotImage(Dict, plotParams, flag, spacetime=False, movie=False):
                 ax2.index = len(tau) // 2
                 image_viewer(ax2, Histogram[:, :, ax2.index], plotParams, alpha,
                              X, Y, Z, tau[ax2.index])
+                ax2.set_aspect('equal')
+                    
+                if plotParams['invert_xaxis']:
+                    ax2.invert_xaxis()
+                    
+                if plotParams['invert_yaxis']:
+                    ax2.invert_yaxis()
+                    
+                if plotParams['invert_zaxis']:
+                    ax2.invert_zaxis()
             
                 
                 # Create a third figure to plot isosurface of support of source function in space-time

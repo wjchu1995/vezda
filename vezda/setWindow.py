@@ -257,7 +257,7 @@ def cli():
                         be a positive integer greater than or equal to 1.
                         '''))
         
-        elif all(v is None for v in [args.time, args.step]) and all(v is not None for v in [args.tstart, args.tstop]):
+        elif all(v is None for v in [args.time, args.tstep]) and all(v is not None for v in [args.tstart, args.tstop]):
             if recordingTimes[0] <= args.tstart and args.tstart < args.tstop and args.tstop <= recordingTimes[-1]:
                 tstart = args.tstart
                 tstop = args.tstop

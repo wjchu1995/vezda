@@ -24,8 +24,8 @@ def Morozov(U, s, b, delta, alpha):
     # parameter 'alpha'.
     #
     # input: 
-    #    U, S, Vh = svd(A) is the singular value decomposition of matrix A,
-    #        i.e., A = USVh, s = diag(S)
+    #    U, S, V = svd(A) is the singular-value decomposition of matrix A,
+    #        i.e., A = U @ S @ V.T,   s = diag(S)
     #    b: right-hand side of Ax = b
     #    delta: noise level (a positive constant)
     #    alpha: the regularization parameter
@@ -35,6 +35,6 @@ def Morozov(U, s, b, delta, alpha):
     
     value = 0
     for n in range(len(s)):
-        value += (alpha**2 - delta**2 * s[n]**2) / (s[n]**2 + alpha)**2 * np.abs(np.dot(U[:,n].T, b))**2    
+        value += (alpha**2 - delta**2 * s[n]**2) / (s[n]**2 + alpha)**2 * np.abs(U[:,n].T @ b)**2    
     
     return value

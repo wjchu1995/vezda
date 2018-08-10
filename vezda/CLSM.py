@@ -125,7 +125,7 @@ def solver(s, U, V, alpha):
                 sampling grid.
                 '''))
     
-    if int(samplingGrid['ndspace']) == 2:
+    if 'z' not in samplingGrid:
         # Apply concurrent linear sampling method to three-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
@@ -177,7 +177,7 @@ def solver(s, U, V, alpha):
                  alpha=alpha, X=X, Y=Y)
     
     #==============================================================================    
-    elif int(samplingGrid['ndspace']) == 3:
+    else:
         # Apply concurrent linear sampling method to four-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
