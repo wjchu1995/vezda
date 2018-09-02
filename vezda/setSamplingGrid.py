@@ -394,7 +394,7 @@ def cli():
             xnum = len(x)
             
         elif args.xaxis is not None and all(v is None for v in [args.xstart, args.xstop, args.nx]):
-            xaxis = args.time.split(',')
+            xaxis = args.xaxis.split(',')
             if len(xaxis) != 3:
                 sys.exit(textwrap.dedent(
                         '''
@@ -552,7 +552,7 @@ def cli():
             ynum = len(y)
             
         elif args.yaxis is not None and all(v is None for v in [args.ystart, args.ystop, args.ny]):
-            yaxis = args.time.split(',')
+            yaxis = args.yaxis.split(',')
             if len(yaxis) != 3:
                 sys.exit(textwrap.dedent(
                         '''
@@ -711,7 +711,7 @@ def cli():
                 znum = len(z)
             
         elif args.zaxis is not None and all(v is None for v in [args.zstart, args.zstop, args.nz]):
-            zaxis = args.time.split(',')
+            zaxis = args.zaxis.split(',')
             if len(zaxis) != 3:
                 sys.exit(textwrap.dedent(
                         '''

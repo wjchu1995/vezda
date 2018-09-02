@@ -511,7 +511,7 @@ def solver(medium, s, U, V, alpha):
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
-        np.savez('imageTELSM.npz', Image=Image, Histogram=Histogram,
+        np.savez('imageNFE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y, tau=tau)
     
     #==============================================================================    
@@ -1262,5 +1262,5 @@ def solver(medium, s, U, V, alpha):
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
         
-        np.savez('imageTELSM.npz', Image=Image, Histogram=Histogram,
+        np.savez('imageNFE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y, Z=Z, tau=tau)

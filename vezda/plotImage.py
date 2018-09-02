@@ -29,10 +29,10 @@ from pathlib import Path
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--telsm', action='store_true',
-                        help='''Plot the image obtained using the total-energy linear sampling method.''')
-    parser.add_argument('--clsm', action='store_true',
-                        help='''Plot the image obtained using the concurrent linear sampling method.''')
+    parser.add_argument('--nfe', action='store_true',
+                        help='''Plot the image obtained by solving the near-field equation.''')
+    parser.add_argument('--lse', action='store_true',
+                        help='''Plot the image obtained by solving the Lippmann-Schwinger equation.''')
     parser.add_argument('--spacetime', action='store_true',
                         help='''Plot the support of the source function in space-time.''')
     parser.add_argument('--movie', action='store_true',
@@ -301,16 +301,16 @@ def cli():
     #==============================================================================
     
     
-    if Path('imageTELSM.npz').exists() and not Path('imageCLSM.npz').exists():
-        if args.clsm:
+    if Path('imageNFE.npz').exists() and not Path('imageLSE.npz').exists():
+        if args.lse:
             sys.exit(textwrap.dedent(
                     '''
-                    PlotError: User requested to plot an image obtained using CLSM,
-                    but no such image exists.
+                    PlotError: User requested to plot an image obtained by solving
+                    the Lippmann-Schwinger equation (LSE), but no such image exists.
                     '''))
             
-        # plot telsm image
-        Dict = np.load('imageTELSM.npz')
+        # plot the image obtained by solving the near-field equaiton (NFE)
+        Dict = np.load('imageNFE.npz')
         X = Dict['X']
         Y = Dict['Y']
         if 'Z' in Dict:
@@ -329,24 +329,24 @@ def cli():
                 fig2, ax2, fig3, ax3 = otherImages
         
         
-    elif not Path('imageTELSM.npz').exists() and Path('imageCLSM.npz').exists():
-        if args.telsm:
+    elif not Path('imageNFE.npz').exists() and Path('imageLSE.npz').exists():
+        if args.nfe:
             sys.exit(textwrap.dedent(
                     '''
-                    PlotError: User requested to plot an image obtained using TELSM,
-                    but no such image exists.
+                    PlotError: User requested to plot an image obtained by solving
+                    the near-field equation (NFE), but no such image exists.
                     '''))
             
-        # plot clsm image
-        Dict = np.load('imageCLSM.npz')
+        # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
+        Dict = np.load('imageLSE.npz')
         flag = 'clsm'
         fig1, ax1 = plotImage(Dict, plotParams, flag)
         
     
-    elif Path('imageTELSM.npz').exists() and Path('imageCLSM.npz').exists():
-        if args.telsm and not args.clsm:
-            # plot telsm image
-            Dict = np.load('imageTELSM.npz')
+    elif Path('imageNFE.npz').exists() and Path('imageLSE.npz').exists():
+        if args.nfe and not args.lse:
+            # plot the image obtained by solving the near-field equaiton (NFE)
+            Dict = np.load('imageNFE.npz')
             X = Dict['X']
             Y = Dict['Y']
             if 'Z' in Dict:
@@ -365,44 +365,48 @@ def cli():
                     fig2, ax2, fig3, ax3 = otherImages
         
                 
-        elif not args.telsm and args.clsm:
-            # plot clsm image
-            Dict = np.load('imageCLSM.npz')
+        elif not args.nfe and args.lse:
+            # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
+            Dict = np.load('imageLSE.npz')
             flag = 'clsm'
             fig1, ax1 = plotImage(Dict, plotParams, flag)
             
         
-        elif args.telsm and args.clsm:
+        elif args.nfe and args.lse:
             sys.exit(textwrap.dedent(
                     '''
-                    PlotError: Please specify only one of the arguments \'--telsm\' or \'--clsm\' to
+                    PlotError: Please specify only one of the arguments \'--nfe\' or \'--lse\' to
                     view the corresponding image.'''))
         
         
         else:
             sys.exit(textwrap.dedent(
                     '''
-                    Images obtained using both TELSM and CLSM are available. Enter:
+                    Images obtained by solving both NFE and LSE are available. Enter:
                         
-                        vzimage --telsm
+                        vzimage --nfe
                         
-                    to view the image obtained using TELSM or
+                    to view the image obtained by solving NFE or
                     
-                        vzimage --clsm
+                        vzimage --lse
                         
-                    to view the image obtained using CLSM.
+                    to view the image obtained by solving LSE.
                     '''))
             
     else:
         flag = ''
-        if args.telsm:
-            print('Warning: An image obtained using TELSM does not exist.')
+        if args.nfe:
+            print('Warning: An image obtained by solving the near-field equation (NFE) does not exist.')
         
-        elif args.clsm:
-            print('Warning: An image obtained using CLSM does not exist.')
+        elif args.lse:
+            print('Warning: An image obtained by solving the Lippmann-Schwinger equation (LSE) does not exist.')
         
-        elif args.telsm and args.clsm:
-            print('Warning: An image has not yet been obtained using either TELSM or CLSM.')
+        elif args.nfe and args.lse:
+            print(textwrap.dedent(
+                    '''
+                    Warning: An image has not yet been obtained by solving either the
+                    near-field equation (NFE) or the Lippmann-Schwinger equation (LSE).
+                    '''))
         
         
     

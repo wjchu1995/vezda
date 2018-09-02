@@ -14,16 +14,19 @@
 #==============================================================================
 
 import numpy as np
-from scipy.fftpack import fft, ifft
+from numpy.fft import rfft, irfft
 from scipy.sparse.linalg import LinearOperator
 from vezda.math_utils import nextPow2
 
-def asSymmetricOperator(data):
+#==============================================================================
+# Time-domain implementations
+
+def asSymmetricConvolutionOperator(data):
     '''
     This function is used to create a symmetric (square) matrix for the
-    singular-value decomposition of the near-field operator. It takes the
-    data and defines a matrix-vector product for both the near-field matrix
-    and its transpose.
+    singular-value decomposition of either the near-field operator (NFO)
+    or the Lippmann-Schwinger operator (LSO). It takes the data and defines
+    a matrix-vector product for both the operator and its adjoint.
     
     Input: a three-dimensional data array of shape Nr x Nt x Ns
     
@@ -71,7 +74,7 @@ def asSymmetricOperator(data):
             x2 = x[-(Nt * Ns):]
             
             # reshape x1 and x2 into matrices X1 and X2
-            # X1 multiplies Matrix.T (time reversal), so flip up-down
+            # X1 multiplies Matrix.T (time reversal), so time reverse X1
             X1 = np.flipud(np.reshape(x1, (Nt, Nr), order='F'))
             X2 = np.reshape(x2, (Nt, Ns), order='F')
             
@@ -82,16 +85,16 @@ def asSymmetricOperator(data):
                 # Compute the matrix-vector product for Matrix * X2
                 U = data[i, :, :]
                 # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolution = ifft(fft(U, n=N, axis=0) * fft(X2, n=N, axis=0), axis=0).real
+                circularConvolution = irfft(rfft(U, n=N, axis=0) * rfft(X2, n=N, axis=0), axis=0)
                 convolutionMatrix = circularConvolution[:Nt, :]
-                Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
+                Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over sources
                 
                 # Compute the matrix-vector product for Matrix.T * X1
                 UT = data[:, :, i].T
                 # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolutionT = ifft(fft(UT, n=N, axis=0) * fft(X1, n=N, axis=0), axis=0).real
-                convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])        
-                Y2[:, i] = np.sum(convolutionMatrixT, axis=1) # sum over all receivers
+                circularConvolutionT = irfft(rfft(UT, n=N, axis=0) * rfft(X1, n=N, axis=0), axis=0)
+                convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])
+                Y2[:, i] = np.sum(convolutionMatrixT, axis=1) # sum over receivers
                 
             y1 = np.reshape(Y1, (Nt * Nr, 1), order='F')
             y2 = np.reshape(Y2, (Nt * Ns, 1), order='F')
@@ -120,32 +123,33 @@ def asSymmetricOperator(data):
                 # Compute the matrix-vector product for Matrix * X2
                 U = data[i, :, :]
                 # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolution = ifft(fft(U, n=N, axis=0) * fft(X2, n=N, axis=0), axis=0).real
+                circularConvolution = irfft(rfft(U, n=N, axis=0) * rfft(X2, n=N, axis=0), axis=0)
                 convolutionMatrix = circularConvolution[:Nt, :]
-                Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
+                Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over sources
             
             for j in range(Ns):
                 # Compute the matrix-vector product for Matrix.T * X1
                 UT = data[:, :, j].T
                 # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolutionT = ifft(fft(UT, n=N, axis=0) * fft(X1, n=N, axis=0), axis=0).real
-                convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])        
-                Y2[:, j] = np.sum(convolutionMatrixT, axis=1) # sum over all receivers
+                circularConvolutionT = irfft(rfft(UT, n=N, axis=0) * rfft(X1, n=N, axis=0), axis=0)
+                convolutionMatrixT = np.flipud(circularConvolutionT[:Nt, :])
+                Y2[:, j] = np.sum(convolutionMatrixT, axis=1) # sum over receivers
                 
             y1 = np.reshape(Y1, (Nt * Nr, 1), order='F')
             y2 = np.reshape(Y2, (Nt * Ns, 1), order='F')
-        
+            
             return np.concatenate((y1, y2))
     
     return LinearOperator(shape=(Nt * (Nr + Ns), Nt * (Nr + Ns)), matvec=MatVec)
 
 #==============================================================================
 
-def asNearFieldOperator(data):
+def asConvolutionOperator(data):
     '''
     This function takes the data and defines a matrix-vector product for the 
-    near-field operator. (This function is not intended to be used to compute
-    a singular-value decomposition -- see the definition for 'asSymmetricOperator')
+    either the near-field operator (NFO) or the Lippmann-Schwinger operator (LSO).
+    (This function is not intended to be used to compute a singular-value
+    decomposition -- see the definition for 'asSymmetricConvolutionOperator')
     
     Input: a three-dimensional data array of shape Nr x Nt x Ns
     
@@ -174,7 +178,7 @@ def asNearFieldOperator(data):
     def MatVec(x):        
         
         # reshape x into a matrix X
-        X = np.reshape(x, (Nt, Ns))
+        X = np.reshape(x, (Nt, Ns), order='F')
         
         Y = np.zeros((Nt, Nr))
             
@@ -182,11 +186,11 @@ def asNearFieldOperator(data):
             # Compute the matrix-vector product for Matrix * X
             U = data[i, :, :]
             # Circular convolution: pad time axis (axis=0) with zeros to length N
-            circularConvolution = ifft(fft(U, n=N, axis=0) * fft(X, n=N, axis=0), axis=0).real
+            circularConvolution = irfft(rfft(U, n=N, axis=0) * rfft(X, n=N, axis=0), axis=0)
             convolutionMatrix = circularConvolution[:Nt, :]
-            Y[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
+            Y[:, i] = np.sum(convolutionMatrix, axis=1) # sum over sources
             
-        y = np.reshape(Y, (Nt * Nr, 1))
+        y = np.reshape(Y, (Nt * Nr, 1), order='F')
         
         return y
     

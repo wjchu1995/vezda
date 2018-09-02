@@ -17,15 +17,15 @@ import sys
 import numpy as np
 import argparse
 import textwrap
-import vezda.TELSM
-import vezda.CLSM
+import vezda.NFE_Solver
+import vezda.LSE_Solver
 
 def cli():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', type=str, default='telsm', choices=['telsm', 'clsm'],
-                        help='''Specify whether to use the total-energy linear sampling method (telsm)
-                        or the concurrent linear sampling method (clsm).
-                        Default is set to 'telsm'.''')
+    parser.add_argument('--nfe', action='store_true',
+                        help='Solve the near-field equation (NFE).')
+    parser.add_argument('--lse', action='store_true',
+                        help='Solve the Lippmann-Schwinger equation (LSE).')
     parser.add_argument('--regPar', '--alpha', type=float,
                         help='Specify the value of the regularization parameter')
     parser.add_argument('--medium', type=str, default='constant', choices=['constant', 'variable'],
@@ -47,8 +47,8 @@ def cli():
         # if args.regPar is None
         alpha = 0
         
-    if args.method == 'telsm':
-        # Solve the near-field equation using the total-energy linear sampling method
+    if args.nfe:
+        # Solve the near-field equation
         # Read in the computed singular-value decomposition of the near-field operator
         # Singular values are stored in vector s
         # Left vectors are columns of U
@@ -59,10 +59,10 @@ def cli():
         U = SVD['U']
         V = SVD['V']
         
-        vezda.TELSM.solver(args.medium, s, U, V, alpha)
-        
-    elif args.method == 'clsm':
-        # Solve the Lippmann-Schwinger equation using the concurrent linear sampling method
+        vezda.NFE_Solver.solver(args.medium, s, U, V, alpha)
+    
+    elif args.lse:
+        # Solve the Lippmann-Schwinger equation
         # Read in the computed singular-value decomposition of the Lippmann-Schwinger operator
         # Singular values are stored in vector s
         # Left vectors are columns of U
@@ -73,4 +73,18 @@ def cli():
         U = SVD['U']
         V = SVD['V']
         
-        vezda.CLSM.solver(s, U, V, alpha)
+        vezda.LSE_Solver.solver(s, U, V, alpha)
+        
+    else:
+        sys.exit(textwrap.dedent(
+                '''
+                Please specify which linear sampling equation you would like to solve. Enter:
+                    
+                    vzsolve --nfe
+                
+                to solve the near-field equation or
+                    
+                    vzsolve --lse
+                    
+                to solve the Lippmann-Schwinger equation.
+                '''))

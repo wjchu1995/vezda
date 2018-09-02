@@ -97,7 +97,7 @@ def solver(s, U, V, alpha):
 
     recordedData = recordedData[rinterval, :, :]
     recordedData = recordedData[:, tinterval, :]
-    recordedData = recordedData[:, :, sinterval]   
+    recordedData = recordedData[:, :, sinterval]
     
     Nr = receiverPoints.shape[0]
     Ns = sourcePoints.shape[0]
@@ -142,7 +142,7 @@ def solver(s, U, V, alpha):
         
         print('Localizing the source function...')
         if Ns == 1:
-            # Compute the Tikhonov-regularized solution to the near-field equation L * chi = u.
+            # Compute the Tikhonov-regularized solution to the Lippmann-Schwinger equation L * chi = u.
             # 'u' is recorded data
             # 'alpha' is the regularization parameter
             # 'chi_alpha' is the regularized solution given 'alpha'
@@ -158,11 +158,11 @@ def solver(s, U, V, alpha):
             Histogram[:, :, 0] = Image
                 
         else:                
-            for i in trange(Ns, desc='Sum over sources'):
+            for i in trange(Ns, desc='Summing over sources'):
                 data = np.reshape(recordedData[:, :, i], (Nt * Nr, 1))
-                psi_alpha = Tikhonov(U, s, V, data, alpha)
-                psi_alpha = np.reshape(psi_alpha, (Nx * Ny, Nt))
-                indicator = np.reshape(norm(psi_alpha, axis=1), X.shape)
+                chi_alpha = Tikhonov(U, s, V, data, alpha)
+                chi_alpha = np.reshape(chi_alpha, (Nx * Ny, Nt))
+                indicator = np.reshape(norm(chi_alpha, axis=1), X.shape)
                 
                 Imin = np.min(indicator)
                 Imax = np.max(indicator)
@@ -170,10 +170,9 @@ def solver(s, U, V, alpha):
                 Histogram[:, :, i] = indicator
                 Image += indicator**2
                     
-            Image /= Ns
-            Image = np.sqrt(Image)
+            Image = np.sqrt(Image / Ns)
             
-        np.savez('imageCLSM.npz', Image=Image, Histogram=Histogram,
+        np.savez('imageLSE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y)
     
     #==============================================================================    
@@ -196,7 +195,7 @@ def solver(s, U, V, alpha):
         
         print('Localizing the source function...')
         if Ns == 1:
-            # Compute the Tikhonov-regularized solution to the near-field equation L * chi = u.
+            # Compute the Tikhonov-regularized solution to the Lippmann-Schwinger equation L * chi = u.
             # 'u' is recorded data
             # 'alpha' is the regularization parameter
             # 'chi_alpha' is the regularized solution given 'alpha'
@@ -224,8 +223,7 @@ def solver(s, U, V, alpha):
                 Histogram[:, :, i] = indicator
                 Image += indicator**2
                     
-            Image /= Ns
-            Image = np.sqrt(Image)
+            Image = np.sqrt(Image / Ns)
             
-        np.savez('imageCLSM.npz', Image=Image, Histogram=Histogram,
+        np.savez('imageLSE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y, Z=Z)

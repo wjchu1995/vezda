@@ -279,6 +279,21 @@ def cli():
         else:                
             print('\nComputing free-space test functions for the current sampling grid...')
             time = recordingTimes[tinterval]
+            
+            samplingGrid = np.load('samplingGrid.npz')
+            x = samplingGrid['x']
+            y = samplingGrid['y']
+            if 'z' in samplingGrid:
+                z = samplingGrid['z']
+            else:
+                z = None
+            tau = samplingGrid['tau']
+            
+            pulse = lambda t : pulseFun.pulse(t)
+            velocity = pulseFun.velocity
+            peakFreq = pulseFun.peakFreq
+            peakTime = pulseFun.peakTime
+            
             X, sourcePoints = sampleSpaceTime(receiverPoints, time, velocity,
                                               tau, x, y, z, pulse)
                     

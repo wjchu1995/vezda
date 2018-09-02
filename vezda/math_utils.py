@@ -13,7 +13,6 @@
 # limitations under the License.
 #==============================================================================
 import numpy as np
-from scipy.fftpack import fft, ifft, fftfreq
 
 def nextPow2(i):
     '''
@@ -21,7 +20,7 @@ def nextPow2(i):
     Output: the next power of 2 greater than or equal to i
     '''
 
-    n = 1
+    n = 2
     while n < i:
         n *= 2
     
@@ -48,17 +47,29 @@ def timeShift(data, tau, dt):
     N = nextPow2(2 * Nt)
     
     # FFT the 'data' array into the frequency domain along the time axis=1
-    freqData = fft(data, n=N, axis=1)
+    fftData = np.fft.rfft(data, n=N, axis=1)
     
     # Set up the phase vector e^(-i * omega * tau)
-    iomega = 2j * np.pi * fftfreq(N, dt)
+    iomega = 2j * np.pi * np.fft.rfftfreq(N, dt)
     phase = np.exp(-iomega * tau)
     
     # Apply time shift in the frequency domain (element-wise array multiplication)
     # and inverse FFT back into the time domain (keeping only the real part)
-    shiftedData = ifft(freqData * phase[None, :, None], axis=1).real
+    shiftedData = np.fft.irfft(fftData * phase[None, :, None], axis=1)
     
     # Return the shifted data array with the first Nt components along
     # the time axis (axis=1) corresponding to the original length of the
     # time axis.
     return shiftedData[:, :Nt, :]
+
+def timeReverse(data):
+    '''
+    Time reverse a discrete signal
+    
+    data: input array with time signals along axis=0
+    '''
+    
+    reversedData = np.flipud(data)
+    reversedData = np.roll(reversedData, shift=1, axis=0)
+    
+    return reversedData

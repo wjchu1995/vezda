@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from vezda.sampling_utils import samplingIsCurrent, sampleSpaceTime
 from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
                               process_key_vectors, default_params, setFigure)
-from vezda.LinearOperators import asSymmetricOperator
+from vezda.LinearOperators import asSymmetricConvolutionOperator
 import numpy as np
 import pickle
 import time
@@ -578,18 +578,18 @@ def cli():
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
-            X = X[:, :, :, 0]    
+            X = X[:, :, :, 0]
             Nr, Nt, Ns = X.shape
             
         #==============================================================================
-        A = asSymmetricOperator(X)
-        
         # Compute the k largest algebraic eigenvalues (which='LA') of the operator A
         # Eigenvalues are elements of the vector 's'
         # Eigenvectors are columns of 'W'
         # Singular values of nearFieldMatrix are equivalent to eigenvalues of A
         # Left singular vectors are the first Nt * Nr eigenvectors of W
         # Right singular vectors are the last Nt * Ns eigenvectors of W
+        
+        A = asSymmetricConvolutionOperator(X)
         
         if k == 1:
             print('Computing SVD of the %s for 1 singular value/vector...' %(objectString))
@@ -611,8 +611,8 @@ def cli():
         
         # Write binary output with numpy
         if args.nfo:
-            np.savez('NFO_SVD.npz', s=s, U=U, V=V)
-        else:
+            np.savez('NFO_SVD.npz', s=s, U=U, V=V)        
+        elif args.lso:
             np.savez('LSO_SVD.npz', s=s, U=U, V=V)
     
     #==============================================================================    
