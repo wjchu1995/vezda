@@ -17,7 +17,7 @@ Vezda relies on the following sources of input data:
 
 See the user manual located under the **vezda/docs/** directory for more information on the required data format. 
 
-<sup>1</sup> For imaging objects within inhomogeneous (variable) host materials, you will need to supply the simulated test functions. For imaging objects within homogeneous (constant) host materials, Vezda can compute the test functions for you, so long as you provide a **pulseFun.py** file. See the user manual for more information.
+<sup>1</sup> For imaging objects embedded within inhomogeneous (variable) materials, you will need to supply the simulated test functions. For imaging objects embedded within homogeneous (constant) materials, Vezda can compute the test functions for you, so long as you provide a **pulseFun.py** file. See the user manual for more information.
 
 ### Software Prerequisites
 Vezda requires Python 3. If you only have Python <= 2.7 on your system, you will need to obtain a Python 3 installation to run the Vezda software. Fortunately, there are several options freely available to you which make satisfying this prerequisite simple. I personally recommend using the [Anaconda](https://www.continuum.io/downloads) distribution if you do not already have a Python 3 installation set up. It is perhaps the easiest and quickest way to get a working Python installation up and running with all the scientific and numeric libraries included. As Python is cross-platform, you can download an installation for Windows, macOS, and Linux.
