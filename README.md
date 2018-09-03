@@ -8,11 +8,11 @@ Before you can begin using Vezda, you need to make sure you have the required so
 
 ### Data Prerequisites
 Vezda relies on the following sources of input data:
-* Source locations
 * Receiver locations
 * Recording times
-* Recorded scattered waves
+* Recorded waves
 * Simulated test functions<sup>1</sup>
+* Source locations (optional)
 * Object/scatterer boundary (optional)
 
 See the user manual located under the **vezda/docs/** directory for more information on the required data format. 
