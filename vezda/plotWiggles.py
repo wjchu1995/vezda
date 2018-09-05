@@ -148,7 +148,10 @@ def cli():
         # X[receiver, time, source]
         X = np.load(str(datadir['recordedData']))
         time = recordingTimes
-        sourcePoints = np.load(str(datadir['sources']))
+        if 'sources' in datadir:
+            sourcePoints = np.load(str(datadir['sources']))
+        else:
+            sourcePoints = None
         X = X[rinterval, :, :]
         
     elif args.type == 'testfunc':
@@ -184,6 +187,7 @@ def cli():
             if samplingIsCurrent(TFDict, time, velocity, tau, x, y, z, peakFreq, peakTime):
                 print('Moving forward to plot test functions...')
                 X = TFDict['TFarray']
+                X = X[rinterval, :, :]
                 sourcePoints = TFDict['samplingPoints']
                 
                     
@@ -331,7 +335,14 @@ def cli():
     sinterval = np.arange(sstart, sstop, sstep)
         
     X = X[:, :, sinterval]
-    sourcePoints = sourcePoints[sinterval, :]
+    if sourcePoints is not None:
+        sourcePoints = sourcePoints[sinterval, :]
+    
+    # increment source/recording interval and receiver interval to be consistent
+    # with one-based indexing (i.e., count from one instead of zero)
+    sinterval += 1
+    rinterval += 1
+    rstart += 1
     
     Ns = X.shape[2]
     
@@ -350,7 +361,7 @@ def cli():
         plt.tight_layout()
         fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, t0, tf, rstart, rinterval,
                                                                                   sinterval, receiverPoints, sourcePoints,
-                                                                                  scatterer, args.map, args.type, plotParams))
+                                                                                  Ns, scatterer, args.map, args.type, plotParams))
     
     else:
         fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'])
@@ -362,6 +373,6 @@ def cli():
         plt.tight_layout()
         fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, t0, tf, rstart, rinterval,
                                                                                   sinterval, receiverPoints, sourcePoints,
-                                                                                  scatterer, args.map, args.type, plotParams))
+                                                                                  Ns, scatterer, args.map, args.type, plotParams))
     
     plt.show()

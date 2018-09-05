@@ -320,7 +320,7 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
         ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
         ax.set_ylabel(ylabel, color=ax.labelcolor)
         ax.set_yticks(interval)                
-        ax.set_yticklabels(pltstart + interval)
+        ax.set_yticklabels(interval)
         plt.setp(ax.get_yticklabels(), visible=True)
         plt.setp(ax.get_yticklines(), visible=True)
         
@@ -385,86 +385,141 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
 def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams):
     if index is None:
         
-        if receiverPoints.shape[1] == 2:
-            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+        if sourcePoints is None:
+            if receiverPoints.shape[1] == 2:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
-            if flag == 'data':
-                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '*', color=ax.sourcecolor)
-        
-            elif flag == 'testfunc':
-                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '.', color=ax.sourcecolor)
-        
-            if scatterer is not None and plotParams['show_scatterer']:
-                ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                   
-        elif receiverPoints.shape[1] == 3:
-            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+            elif receiverPoints.shape[1] == 3:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
-            if flag == 'data':
-                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '*', color=ax.sourcecolor)
-        
-            elif flag == 'testfunc':
-                ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '.', color=ax.sourcecolor)
-        
-            if scatterer is not None and plotParams['show_scatterer']:
-                ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
                 
-            zu = plotParams['zu']
-            zlabel = plotParams['zlabel']
+                zu = plotParams['zu']
+                zlabel = plotParams['zlabel']
         
-            if zu != '':
-                ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
-            else:
-                ax.set_zlabel(zlabel, color=ax.labelcolor)
+                if zu != '':
+                    ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+                else:
+                    ax.set_zlabel(zlabel, color=ax.labelcolor)
+                    
+                if plotParams['invert_zaxis']:
+                    ax.invert_zaxis()
+            
+        else:   # sourcePoints exist
+            if receiverPoints.shape[1] == 2:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+        
+                if flag == 'data':
+                    ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '*', color=ax.sourcecolor)
+        
+                elif flag == 'testfunc':
+                    ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '.', color=ax.sourcecolor)
+        
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
+                
+                
+            elif receiverPoints.shape[1] == 3:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+        
+                if flag == 'data' and sourcePoints is not None:
+                    ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '*', color=ax.sourcecolor)
+        
+                elif flag == 'testfunc':
+                    ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '.', color=ax.sourcecolor)
+        
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
+                
+                zu = plotParams['zu']
+                zlabel = plotParams['zlabel']
+        
+                if zu != '':
+                    ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+                else:
+                    ax.set_zlabel(zlabel, color=ax.labelcolor)
+                    
+                if plotParams['invert_zaxis']:
+                    ax.invert_zaxis()
          
     else:
         ax.clear()
         ax.set_title('Map', color=ax.titlecolor)
         
-        # delete the row corresponding to the current source (plot current source separately)
-        sources = np.delete(sourcePoints, index, axis=0)
-        currentSource = sourcePoints[index, :]
-    
-        if receiverPoints.shape[1] == 2:
-            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+        if sourcePoints is None:
+            if receiverPoints.shape[1] == 2:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
-            if flag == 'data':
-                ax.plot(sources[:, 0], sources[:, 1], '*', color=ax.inactivesourcecolor)
-                ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color=ax.activesourcecolor)
-        
-            elif flag == 'testfunc':
-                ax.plot(sources[:, 0], sources[:, 1], '.', color=ax.inactivesourcecolor)
-                ax.plot(currentSource[0], currentSource[1], marker='.', markersize=12, color=ax.activesourcecolor)
-        
-            if scatterer is not None and plotParams['show_scatterer']:
-                ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                   
-        elif receiverPoints.shape[1] == 3:
-            ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+            elif receiverPoints.shape[1] == 3:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
-            if flag == 'data':
-                ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color=ax.inactivesourcecolor)
-                ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color=ax.activesourcecolor)
-        
-            elif flag == 'testfunc':
-                ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '.', color=ax.inactivesourcecolor)
-                ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='.', markersize=12, color=ax.activesourcecolor)
-        
-            if scatterer is not None and plotParams['show_scatterer']:
-                ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
                 
-            zu = plotParams['zu']
-            zlabel = plotParams['zlabel']
+                zu = plotParams['zu']
+                zlabel = plotParams['zlabel']
         
-            if zu != '':
-                ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
-            else:
-                ax.set_zlabel(zlabel, color=ax.labelcolor)
+                if zu != '':
+                    ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+                else:
+                    ax.set_zlabel(zlabel, color=ax.labelcolor)
                 
-            if plotParams['invert_zaxis']:
-                ax.invert_zaxis()
+                if plotParams['invert_zaxis']:
+                    ax.invert_zaxis()
+            
+        else:
+            # delete the row corresponding to the current source (plot current source separately)
+            sources = np.delete(sourcePoints, index, axis=0)
+            currentSource = sourcePoints[index, :]
+    
+            if receiverPoints.shape[1] == 2:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+        
+                if flag == 'data':
+                    ax.plot(sources[:, 0], sources[:, 1], '*', color=ax.inactivesourcecolor)
+                    ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color=ax.activesourcecolor)
+        
+                elif flag == 'testfunc':
+                    ax.plot(sources[:, 0], sources[:, 1], '.', color=ax.inactivesourcecolor)
+                    ax.plot(currentSource[0], currentSource[1], marker='.', markersize=12, color=ax.activesourcecolor)
+        
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
+                
+                  
+            elif receiverPoints.shape[1] == 3:
+                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+        
+                if flag == 'data':
+                    ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color=ax.inactivesourcecolor)
+                    ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color=ax.activesourcecolor)
+        
+                elif flag == 'testfunc':
+                    ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '.', color=ax.inactivesourcecolor)
+                    ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='.', markersize=12, color=ax.activesourcecolor)
+        
+                if scatterer is not None and plotParams['show_scatterer']:
+                    ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
+                
+                zu = plotParams['zu']
+                zlabel = plotParams['zlabel']
+        
+                if zu != '':
+                    ax.set_zlabel(zlabel + ' (%s)' %(zu), color=ax.labelcolor)
+                else:
+                    ax.set_zlabel(zlabel, color=ax.labelcolor)
+                
+                if plotParams['invert_zaxis']:
+                    ax.invert_zaxis()
         
     ax.grid(False)
     ax.set_aspect('equal')
@@ -719,7 +774,6 @@ def plotImage(Dict, plotParams, flag, spacetime=False, movie=False):
 #==============================================================================
 # General functions for interactive plotting...
 
-
 def remove_keymap_conflicts(new_keys_set):
     '''
     Removes pre-defined keyboard events so that interactive
@@ -733,8 +787,6 @@ def remove_keymap_conflicts(new_keys_set):
             for key in remove_list:
                 keys.remove(key)
 
-
-
 #==============================================================================
 # Specific functions for plotting data and test functions...
 
@@ -745,7 +797,7 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
     Parameters:
     index: a number indicating which source in 'interval' parameter produced the data
     interval: an integer array of source numbers
-    sourcePoints: location of the current source
+    sourcePoints: location of the sources, if known (equals 'None' otherwise)
     flag: a string parameter (either 'data' or 'testfunc')
     plotParams: a dictionary of plot parameters for styling
     '''
@@ -754,11 +806,14 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
     xu = plotParams['xu']
     yu = plotParams['yu']
     
-    if sourcePoints.shape[1] == 2:
-        if flag == 'data':
-            # get type-specific title from plotParams
-            data_title = plotParams['data_title']
-            
+    if flag == 'data':
+        # get type-specific title from plotParams
+        data_title = plotParams['data_title']
+        
+        if sourcePoints is None:
+            title = '%s [Recording %s/%s]' %(data_title, sinterval[index], len(sinterval))
+        
+        elif sourcePoints.shape[1] == 2:
             if  xu != '' and yu != '':
                 title = '%s [Source %s @ (%0.2f %s, %0.2f %s)]' %(data_title, sinterval[index],
                                                                   sourcePoints[index, 0], xu,
@@ -767,27 +822,9 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
                 title = '%s [Source %s @ (%0.2f, %0.2f)]' %(data_title, sinterval[index],
                                                             sourcePoints[index, 0],
                                                             sourcePoints[index, 1])
-                
-        elif flag == 'testfunc':
-            # get type-specific title from plotParams
-            tf_title = plotParams['tf_title']
-            
-            if xu != '' and yu != '':
-                title = '%s [$\\bf{z}$ @ (%0.2f %s, %0.2f %s)]' %(tf_title,
-                                                                  sourcePoints[index, 0], xu,
-                                                                  sourcePoints[index, 1], yu)
-            elif xu == '' and yu == '':
-                title = '%s [$\\bf{z}$ @ (%0.2f, %0.2f)]' %(tf_title,
-                                                            sourcePoints[index, 0],
-                                                            sourcePoints[index, 1])
-                    
-    elif sourcePoints.shape[1] == 3:
-        # get units for z axis from plotParams
-        zu = plotParams['zu']
-        
-        if flag == 'data':
-            # get type-specific title from plotParams
-            data_title = plotParams['data_title']
+        elif sourcePoints.shape[1] == 3:
+            # get units for z axis from plotParams
+            zu = plotParams['zu']
             
             if  xu != '' and yu != '' and zu != '':
                 title = '%s [Source %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(data_title, sinterval[index],
@@ -799,10 +836,24 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
                                                                    sourcePoints[index, 0],
                                                                    sourcePoints[index, 1],
                                                                    sourcePoints[index, 2])
-                
-        elif flag == 'testfunc':
-            # get type-specific title from plotParams
-            tf_title = plotParams['tf_title']
+        
+    else:   # flag == 'testfunc'
+        # get type-specific title from plotParams
+        tf_title = plotParams['tf_title']
+        
+        if sourcePoints.shape[1] == 2:
+            if xu != '' and yu != '':
+                title = '%s [$\\bf{z}$ @ (%0.2f %s, %0.2f %s)]' %(tf_title,
+                                                                  sourcePoints[index, 0], xu,
+                                                                  sourcePoints[index, 1], yu)
+            elif xu == '' and yu == '':
+                title = '%s [$\\bf{z}$ @ (%0.2f, %0.2f)]' %(tf_title,
+                                                            sourcePoints[index, 0],
+                                                            sourcePoints[index, 1])
+                    
+        elif sourcePoints.shape[1] == 3:
+            # get units for z axis from plotParams
+            zu = plotParams['zu']
             
             if xu != '' and yu != '' and zu != '':
                 title = '%s [$\\bf{z}$ @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(tf_title,
@@ -820,7 +871,7 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
     
 
 def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
-                receiverPoints, sourcePoints, scatterer, show_map, flag, plotParams):
+                receiverPoints, sourcePoints, Ns, scatterer, show_map, flag, plotParams):
     '''
     Determines how to draw the next plot based on keyboard events
     
@@ -848,53 +899,53 @@ def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
         
         if event.key == 'left' or event.key == 'down':
             previous_wave(ax1, time, t0, tf, pltstart, rinterval, receiverPoints,
-                          sinterval, sourcePoints, flag, plotParams)
-            previous_map(ax2, receiverPoints, sourcePoints, scatterer, flag, plotParams)
+                          sinterval, sourcePoints, Ns, flag, plotParams)
+            previous_map(ax2, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams)
             
         elif event.key == 'right' or event.key == 'up':
             next_wave(ax1, time, t0, tf, pltstart, rinterval, receiverPoints,
-                      sinterval, sourcePoints, flag, plotParams)
-            next_map(ax2, receiverPoints, sourcePoints, scatterer, flag, plotParams)
+                      sinterval, sourcePoints, Ns, flag, plotParams)
+            next_map(ax2, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams)
                       
     else:
         fig = event.canvas.figure
         ax = fig.axes[0]
         if event.key == 'left' or event.key == 'down':
             previous_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
-                          sinterval, sourcePoints, flag, plotParams)
+                          sinterval, sourcePoints, Ns, flag, plotParams)
         elif event.key == 'right' or event.key == 'up':
             next_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
-                      sinterval, sourcePoints, flag, plotParams)
+                      sinterval, sourcePoints, Ns, flag, plotParams)
     fig.canvas.draw()
          
     
     
 def next_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
-              sinterval, sourcePoints, flag, plotParams):
+              sinterval, sourcePoints, Ns, flag, plotParams):
     volume = ax.volume
-    ax.index = (ax.index + 1) % volume.shape[2]
+    ax.index = (ax.index + 1) % Ns
     title = wave_title(ax.index, sinterval, sourcePoints, flag, plotParams)
     plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, rinterval, 
                 receiverPoints, title, flag, plotParams)
     
 def previous_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
-                  sinterval, sourcePoints, flag, plotParams):
+                  sinterval, sourcePoints, Ns, flag, plotParams):
     volume = ax.volume
-    ax.index = (ax.index - 1) % volume.shape[2]  # wrap around using %
+    ax.index = (ax.index - 1) % Ns  # wrap around using %
     title = wave_title(ax.index, sinterval, sourcePoints, flag, plotParams)
     plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, rinterval,
                 receiverPoints, title, flag, plotParams)
 
 
 
-def previous_map(ax, receiverPoints, sourcePoints, scatterer, flag, plotParams):
-    ax.index = (ax.index - 1) % sourcePoints.shape[0]  # wrap around using %
+def previous_map(ax, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams):
+    ax.index = (ax.index - 1) % Ns  # wrap around using %
     plotMap(ax, ax.index, receiverPoints, sourcePoints, scatterer, flag, plotParams)
     
 
 
-def next_map(ax, receiverPoints, sourcePoints, scatterer, flag, plotParams):
-    ax.index = (ax.index + 1) % sourcePoints.shape[0]  # wrap around using %
+def next_map(ax, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams):
+    ax.index = (ax.index + 1) % Ns  # wrap around using %
     plotMap(ax, ax.index, receiverPoints, sourcePoints, scatterer, flag, plotParams)
 
 

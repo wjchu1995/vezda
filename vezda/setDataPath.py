@@ -65,8 +65,8 @@ def cli():
                  Error: Expected file \'receiverPoints.npy\' not found. Does a file
                  exist containing the receiver coordinates? (This is a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the coordinates of the
-                 receivers (must be binary NumPy '.npy' format). (Default)
+                 Enter 'y/yes' to specify the filename containing the receiver coordinates
+                 (must be binary NumPy '.npy' format). (Default)
                  Enter 'n/no' or 'q/quit to exit this program.
                  '''))
             while userResponded == False:
@@ -91,23 +91,25 @@ def cli():
         #==============================================================================
         if Path(os.path.join(dataPath, 'sourcePoints.npy')).exists():
             sources = os.path.join(dataPath, 'sourcePoints.npy')
+            noSources = False
         else:
             userResponded = False
             print(textwrap.dedent(
                  '''
-                 Error: Expected file \'sourcesPoints.npy\' not found. Does a file
-                 exist containing the source coordinates? (This is a required file.)
+                 Warning: Expected file \'sourcesPoints.npy\' not found. Does a file
+                 exist containing the source coordinates? (This is NOT a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the coordinates of the
-                 sources (must be binary NumPy '.npy' format). (Default)
-                 Enter 'n/no' or 'q/quit to exit this program.
+                 Enter 'y/yes' to specify the filename containing the source coordinates (must be binary NumPy '.npy' format).
+                 Enter 'n/no' to proceed without specifying the source coordinates. (Default)
+                 Enter 'q/quit to exit this program.
                  '''))
             while userResponded == False:
                 answer = input('Action: ')
-                if answer == '' or answer == 'y' or answer == 'yes':
+                if answer == 'y' or answer == 'yes':
                     sourceFile = input('Please specify the filename containing the source coordinates: ')
                     if '.npy' in sourceFile and Path(os.path.join(dataPath, sourceFile)).exists():
                         sources = os.path.join(dataPath, sourceFile)
+                        noSources = False
                         userResponded = True
                         break
                     elif '.npy' in sourceFile and not Path(os.path.join(dataPath, sourceFile)).exists():
@@ -116,7 +118,12 @@ def cli():
                     elif '.npy' not in sourceFile:
                         print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(sourceFile))
                         break  
-                elif answer == 'n' or answer == 'no' or answer == 'q' or answer == 'quit':
+                elif answer == '' or answer == 'n' or answer == 'no':
+                    print('Proceeding without specifying the source coordinates.')
+                    noSources = True
+                    userResponded = True
+                    break
+                elif answer == 'q' or answer == 'quit':
                     sys.exit('Exiting program.')                
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
@@ -307,7 +314,34 @@ def cli():
                         print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
         
         #==============================================================================  
-        if noScatterer and noTestFuncs:
+        if noSources and noScatterer and noTestFuncs:
+            files = [receivers, recordingTimes, recordedData]
+            np.savez('datadir.npz',
+                     path = dataPath,
+                     files = files,
+                     receivers = receivers,
+                     recordingTimes = recordingTimes,
+                     recordedData = recordedData)
+        elif noSources and noScatterer and not noTestFuncs:
+            files = [receivers, recordingTimes, recordedData, testFuncs, samplingPoints]
+            np.savez('datadir.npz',
+                     path = dataPath,
+                     files = files,
+                     receivers = receivers,
+                     recordingTimes = recordingTimes,
+                     recordedData = recordedData,
+                     testFuncs = testFuncs,
+                     samplingPoints = samplingPoints)
+        elif noSources and not noScatterer and noTestFuncs:
+            files = [receivers, scatterer, recordingTimes, recordedData]
+            np.savez('datadir.npz',
+                     path = dataPath,
+                     files = files,
+                     receivers = receivers,
+                     scatterer = scatterer,
+                     recordingTimes = recordingTimes,
+                     recordedData = recordedData)
+        elif not noSources and noScatterer and noTestFuncs:
             files = [receivers, sources, recordingTimes, recordedData]
             np.savez('datadir.npz',
                      path = dataPath,
@@ -316,7 +350,18 @@ def cli():
                      sources = sources,
                      recordingTimes = recordingTimes,
                      recordedData = recordedData)
-        elif noScatterer and not noTestFuncs:
+        elif noSources and not noScatterer and not noTestFuncs:
+            files = [receivers, scatterer, recordingTimes, recordedData, testFuncs, samplingPoints]
+            np.savez('datadir.npz',
+                     path = dataPath,
+                     files = files,
+                     receivers = receivers,
+                     scatterer = scatterer,
+                     recordingTimes = recordingTimes,
+                     recordedData = recordedData,
+                     testFuncs = testFuncs,
+                     samplingPoints = samplingPoints)
+        elif not noSources and noScatterer and not noTestFuncs:
             files = [receivers, sources, recordingTimes, recordedData, testFuncs, samplingPoints]
             np.savez('datadir.npz',
                      path = dataPath,
@@ -327,7 +372,7 @@ def cli():
                      recordedData = recordedData,
                      testFuncs = testFuncs,
                      samplingPoints = samplingPoints)
-        elif not noScatterer and noTestFuncs:
+        elif not noSources and not noScatterer and noTestFuncs:
             files = [receivers, sources, scatterer, recordingTimes, recordedData]
             np.savez('datadir.npz',
                      path = dataPath,
