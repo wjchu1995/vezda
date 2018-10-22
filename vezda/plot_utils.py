@@ -60,6 +60,13 @@ def default_params():
     plotParams['data_title'] = 'Data'
     plotParams['tf_title'] = 'Test Function'
     
+    # for frequency plots
+    plotParams['fu'] = ''
+    plotParams['fmin'] = 0
+    plotParams['fmax'] = 1
+    plotParams['freq_title'] = 'Mean Amplitude Spectrum'
+    plotParams['freq_ylabel'] = 'Amplitude'
+    
     return plotParams
 
 
@@ -89,7 +96,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('black')
             ax1.spines['top'].set_color('black')
             ax1.spines['bottom'].set_color('black')
-            ax1.alpha = 0.7
+            ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.2
             ax1.linecolor = 'slategray'
@@ -152,7 +159,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('black')
             ax1.spines['top'].set_color('black')
             ax1.spines['bottom'].set_color('black')
-            ax1.alpha = 0.7
+            ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.2
             ax1.linecolor = 'slategray'
@@ -171,7 +178,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.spines['right'].set_color('black')
             ax2.spines['top'].set_color('black')
             ax2.spines['bottom'].set_color('black')
-            ax2.alpha = 0.7
+            ax2.alpha = 0.6
             ax2.shadecolor = 'black'
             ax2.shadealpha = 0.2
             ax2.linecolor = 'slategray'

@@ -28,11 +28,13 @@ def cli():
     parser.add_argument('--power', action='store_true',
                         help='''Plot the mean power spectrum of the data. Default is to plot the
                         mean amplitude spectrum of the Fourier transform.''')
-    parser.add_argument('--fmin', type=float, default=0,
+    parser.add_argument('--fmin', type=float,
                         help='Specify the minimum frequency of the power spectrum plot. Default is set to 0.')
     parser.add_argument('--fmax', type=float,
                         help='''Specify the maximum frequency of the power spectrum plot. Default is set to the
                         maximum frequency bin based on the length of the time signal.''')
+    parser.add_argument('--fu', type=str,
+                        help='Specify the frequency units (e.g., Hz)')
     parser.add_argument('--format', '-f', type=str, default='pdf', choices=['png', 'pdf', 'ps', 'eps', 'svg'],
                         help='''specify the image format of the saved file. Accepted formats are png, pdf,
                         ps, eps, and svg. Default format is set to pdf.''')
@@ -124,45 +126,186 @@ def cli():
 
     recordedData = recordedData[rinterval, :, :]
     recordedData = recordedData[:, :, sinterval]
+        
+    freqs, amplitudes = compute_spectrum(recordedData, dt, args.power)
     
     if Path('plotParams.pkl').exists():
         plotParams = pickle.load(open('plotParams.pkl', 'rb'))
         
-    else:
-        plotParams = default_params()
+        if args.power:
+            plotLabel = 'power'
+            plotParams['freq_title'] = 'Mean Power Spectrum'
+            plotParams['freq_ylabel'] = 'Power'
+        else:
+            plotLabel = 'amplitude'
+            plotParams['freq_title'] = 'Mean Amplitude Spectrum'
+            plotParams['freq_ylabel'] = 'Amplitude'
+        
+        if args.fmin is not None: 
+            if args.fmin >= 0:
+                if args.fmax is not None:
+                    if args.fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                        plotParams['fmax'] = args.fmax
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The maximum frequency of the %s spectrum plot must
+                                be greater than the mininum frequency.
+                                ''' %(plotLabel)))   
+                else:
+                    fmax = plotParams['fmax']
+                    if fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The specified minimum frequency of the %s spectrum 
+                                plot must be less than the maximum frequency.
+                                ''' %(plotLabel)))                                        
+            else:
+                sys.exit(textwrap.dedent(
+                        '''
+                        ValueError: The specified minimum frequency of the %s spectrum 
+                        plot must be nonnegative.
+                        ''' %(plotLabel)))
             
-    if args.mode is not None:
-        plotParams['view_mode'] = args.mode
-        pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+        #===============================================================================
+        if args.fmax is not None:
+            if args.fmin is not None:
+                if args.fmin >= 0:
+                    if args.fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                        plotParams['fmax'] = args.fmax
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The maximum frequency of the %s spectrum plot must
+                                be greater than the mininum frequency.
+                                ''' %(plotLabel)))
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            ValueError: The specified minimum frequency of the %s spectrum 
+                            plot must be nonnegative.
+                            ''' %(plotLabel)))
+            else:
+                fmin = plotParams['fmin']
+                if args.fmax > fmin:
+                    plotParams['fmax'] = args.fmax
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            RelationError: The specified maximum frequency of the %s spectrum 
+                            plot must be greater than the minimum frequency.
+                            ''' %(plotLabel)))
+                        
+        #===================================================================================
+        if args.fu is not None:
+            plotParams['fu'] = args.fu
+            
+        if args.mode is not None:
+            plotParams['view_mode'] = args.mode
         
-    freqs, amplitudes = compute_spectrum(recordedData, dt, args.power)
-    if args.power:
-        title = 'Mean Power Spectrum'
-        ylabel = 'Power'
-    else:
-        title = 'Mean Amplitude Spectrum'
-        ylabel = 'Amplitude'
+    else: # create a plotParams dictionary file with default values
+        plotParams = default_params()
         
+        if args.power:
+            plotLabel = 'power'
+            plotParams['freq_title'] = 'Mean Power Spectrum'
+            plotParams['freq_ylabel'] = 'Power'
+        else:
+            plotLabel = 'amplitude'
+            plotParams['freq_title'] = 'Mean Amplitude Spectrum'
+            plotParams['freq_ylabel'] = 'Amplitude'
+        
+        if args.fmin is not None: 
+            if args.fmin >= 0:
+                if args.fmax is not None:
+                    if args.fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                        plotParams['fmax'] = args.fmax
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The maximum frequency of the %s spectrum plot must
+                                be greater than the mininum frequency.
+                                ''' %(plotLabel)))   
+                else:
+                    fmax = np.max(freqs)
+                    plotParams['fmax'] = fmax
+                    if fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The specified minimum frequency of the %s spectrum 
+                                plot must be less than the maximum frequency.
+                                ''' %(plotLabel)))                                        
+            else:
+                sys.exit(textwrap.dedent(
+                        '''
+                        ValueError: The specified minimum frequency of the %s spectrum 
+                        plot must be nonnegative.
+                        ''' %(plotLabel)))
+            
+        #===============================================================================
+        if args.fmax is not None:
+            if args.fmin is not None:
+                if args.fmin >= 0:
+                    if args.fmax > args.fmin:
+                        plotParams['fmin'] = args.fmin
+                        plotParams['fmax'] = args.fmax
+                    else:
+                        sys.exit(textwrap.dedent(
+                                '''
+                                RelationError: The maximum frequency of the %s spectrum plot must
+                                be greater than the mininum frequency.
+                                ''' %(plotLabel)))
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            ValueError: The specified minimum frequency of the %s spectrum 
+                            plot must be nonnegative.
+                            ''' %(plotLabel)))
+            else:
+                fmin = plotParams['fmin']
+                if args.fmax > fmin:
+                    plotParams['fmin'] = args.fmin
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            RelationError: The specified maximum frequency of the %s spectrum 
+                            plot must be greater than the minimum frequency.
+                            ''' %(plotLabel)))                                        
+        else:
+            plotParams['fmax'] = np.max(freqs)
+                        
+        #===================================================================================
+        
+        # update units
+        if args.fu is not None:
+            plotParams['fu'] = args.fu
+            
+        if args.mode is not None:
+            plotParams['view_mode'] = args.mode
     
-    if args.fmax is not None and args.fmax <= args.fmin:
-        sys.exit(textwrap.dedent(
-            '''
-            RelationError: The maximum frequency of the power spectrum plot must
-            be greater than the mininum frequency.
-            '''))
-    elif args.fmin < 0:
-        sys.exit(textwrap.dedent(
-                '''
-                ValueError: The minimum frequency of the power spectrum plot must be nonnegative.
-                '''))
-    fmin = args.fmin
-    fmax = args.fmax
+    pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+    
     
     fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'])
     ax.plot(freqs, amplitudes, color=ax.linecolor, linewidth=ax.linewidth)
-    ax.set_title(title, color=ax.titlecolor)
-    ax.set_xlabel('Frequency (Hz)', color=ax.labelcolor)
-    ax.set_ylabel(ylabel, color=ax.labelcolor)
+    ax.set_title(plotParams['freq_title'], color=ax.titlecolor)
+    
+    # get frequency units from plotParams
+    fu = plotParams['fu']
+    fmin = plotParams['fmin']
+    fmax = plotParams['fmax']
+    if fu != '':
+        ax.set_xlabel('Frequency (%s)' %(fu), color=ax.labelcolor)
+    else:
+        ax.set_xlabel('Frequency', color=ax.labelcolor)
+    ax.set_ylabel(plotParams['freq_ylabel'], color=ax.labelcolor)
     ax.set_xlim([fmin, fmax])
     ax.set_ylim(bottom=0)
     ax.fill_between(freqs, 0, amplitudes, where=(amplitudes > 0), color='m', alpha=ax.alpha)
@@ -171,3 +314,4 @@ def cli():
     plt.tight_layout()
     fig.savefig('FourierSpectrum.' + args.format, format=args.format, bbox_inches='tight')
     plt.show()
+    
