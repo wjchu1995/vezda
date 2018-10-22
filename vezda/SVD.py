@@ -461,29 +461,61 @@ def cli():
     if computeSVD:
         if args.nfo:
             
-            # read in the recorded data array
-            X  = np.load(str(datadir['recordedData']))
+            if Path('noisyData.npy').exists():
+                userResponded = False
+                print(textwrap.dedent(
+                      '''
+                      Detected that band-limited noise has been added to the data array.
+                      Would you like to compute an SVD of the noisy data? ([y]/n)
+                      
+                      Enter 'q/quit' exit the program.
+                      '''))
+                while userResponded == False:
+                    answer = input('Action: ')
+                    if answer == '' or answer == 'y' or answer == 'yes':
+                        print('Proceeding with singular-value decomposition of noisy data...')
+                        # read in the noisy data array
+                        X = np.load('noisyData.npy')
+                        userResponded = True
+                    elif answer == 'n' or answer == 'no':
+                        print('Proceeding with singular-value decomposition of noise-free data...')
+                        # read in the recorded data array
+                        X  = np.load(str(datadir['recordedData']))
+                        userResponded = True
+                    elif answer == 'q' or answer == 'quit':
+                        sys.exit('Exiting program.\n')
+                    else:
+                        print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
+                
+            else:
+                # read in the recorded data array
+                X  = np.load(str(datadir['recordedData']))
             
             if Path('window.npz').exists():
                 print('Detected user-specified window:\n')
                 
-                print('window @ receivers : start =', rstart)
+                # For display/printing purposes, count receivers with one-based
+                # indexing. This amounts to incrementing the rstart parameter by 1
+                print('window @ receivers : start =', rstart + 1)
                 print('window @ receivers : stop =', rstop)
                 print('window @ receivers : step =', rstep, '\n')
-                
+            
                 print('window @ time : start =', tstart)
                 print('window @ time : stop =', tstop)
                 print('window @ time : step =', tstep, '\n')
-                
+             
                 # Apply the source window
+                slabel = windowDict['slabel']
                 sstart = windowDict['sstart']
                 sstop = windowDict['sstop']
                 sstep = windowDict['sstep']
                 sinterval = np.arange(sstart, sstop, sstep)
                 
-                print('window @ sources : start =', sstart)
-                print('window @ sources : stop =', sstop)
-                print('window @ sources : step =', sstep, '\n')                                
+                # For display/printing purposes, count recordings/sources with one-based
+                # indexing. This amounts to incrementing the sstart parameter by 1
+                print('window @ %s : start = %s' %(slabel, sstart + 1))
+                print('window @ %s : stop = %s' %(slabel, sstop))
+                print('window @ %s : step = %s\n' %(slabel, sstep))                
                 
                 print('Applying window to data volume...')
                 X = X[rinterval, :, :]
@@ -545,7 +577,7 @@ def cli():
                 print('Checking consistency with current space-time sampling grid...')
                 TFDict = np.load('VZTestFuncs.npz')
                 
-                if samplingIsCurrent(TFDict, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
                     print('Moving forward to SVD...')
                     X = TFDict['TFarray']
                     sourcePoints = TFDict['samplingPoints']
@@ -556,11 +588,11 @@ def cli():
                                                         tau, x, y, z, pulse)
                     
                     if z is None:
-                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, tau=tau, samplingPoints=sourcePoints)
                     else:
-                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
                                  peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                  x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
@@ -570,11 +602,11 @@ def cli():
                                                     tau, x, y, z, pulse)
                     
                 if z is None:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, tau=tau, samplingPoints=sourcePoints)
                 else:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
@@ -618,9 +650,16 @@ def cli():
     #==============================================================================    
     if args.plot and all(v is not None for v in [s, U, V]):
         
-        if args.nfo:    # Near-field operator
-            sourcePoints = np.load(str(datadir['sources']))
+        Nr = receiverPoints.shape[0]
+        Nt = len(recordingTimes)
+        Ns = int(V.shape[0] / Nt)
+        k = len(s)
         
+        # Reshape singular vectors for plotting
+        U = np.reshape(U, (Nr, Nt, k))
+        V = np.reshape(V, (Ns, Nt, k))
+        
+        if args.nfo:    # Near-field operator
             try:
                 sinterval
             except NameError:
@@ -633,16 +672,22 @@ def cli():
                     sstep = windowDict['sstep']    
                 else:
                     sstart = 0
-                    sstop = sourcePoints.shape[0]
+                    sstop = Ns
                     sstep = 1
                 
                 sinterval = np.arange(sstart, sstop, sstep)
                 
-            sourcePoints = sourcePoints[sinterval, :]
+            if 'sources' in datadir:
+                sourcePoints = np.load(str(datadir['sources']))
+                sourcePoints = sourcePoints[sinterval, :]
+            else:
+                sourcePoints = None
             
         else:
             # if args.lso (Lippmann-Schwinger operator)
-        
+            
+            # in the case of the Lippmann-Schwinger operator, 'sourcePoints'
+            # correspond to sampling points, which should always exist.
             try:
                 sourcePoints
             except NameError:
@@ -665,17 +710,13 @@ def cli():
             sstop = sourcePoints.shape[0]
             sstep = 1
             sinterval = np.arange(sstart, sstop, sstep)
-        
-        remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
-        
-        Nr = receiverPoints.shape[0]
-        Nt = len(recordingTimes)
-        Ns = sourcePoints.shape[0]
-        k = len(s)
-        
-        # Reshape singular vectors for plotting
-        U = np.reshape(U, (Nr, Nt, k))
-        V = np.reshape(V, (Ns, Nt, k))
+            
+        # increment source/recording interval and receiver interval to be consistent
+        # with one-based indexing (i.e., count from one instead of zero)
+        sinterval += 1
+        rinterval += 1
+        rstart += 1
+        sstart += 1
         
         if Path('plotParams.pkl').exists():
             plotParams = pickle.load(open('plotParams.pkl', 'rb'))
@@ -690,15 +731,17 @@ def cli():
         fig_vec, ax1_vec, ax2_vec = setFigure(num_axes=2, mode=plotParams['view_mode'])
         fig_vals, ax_vals = setFigure(num_axes=1, mode=plotParams['view_mode'])
         
+        remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
+        
         ax1_vec.volume = U
         ax1_vec.index = 0
-        leftTitle = vector_title('left', ax1_vec.index)
+        leftTitle = vector_title('left', ax1_vec.index + 1)
         plotWiggles(ax1_vec, U[:, :, ax1_vec.index], recordingTimes, t0, tf, rstart, rinterval,
                     receiverPoints, leftTitle, 'left', plotParams)
       
         ax2_vec.volume = V
         ax2_vec.index = ax1_vec.index
-        rightTitle = vector_title('right', ax2_vec.index)
+        rightTitle = vector_title('right', ax2_vec.index + 1)
         plotWiggles(ax2_vec, V[:, :, ax2_vec.index], recordingTimes, t0, tf, sstart, sinterval,
                     sourcePoints, rightTitle, 'right', plotParams)
         plt.tight_layout()
@@ -707,15 +750,16 @@ def cli():
                                                                                     sourcePoints, plotParams))
         #==============================================================================
         # plot the singular values
+        n = np.arange(1, k + 1, 1)
         kappa = s[0] / s[-1]    # condition number = max(s) / min(s)
-        ax_vals.plot(s, '.', clip_on=False, markersize=9, label=r'Condition Number: %0.1e' %(kappa), color=ax_vals.pointcolor)
+        ax_vals.plot(n, s, '.', clip_on=False, markersize=9, label=r'Condition Number: %0.1e' %(kappa), color=ax_vals.pointcolor)
         ax_vals.set_xlabel('n', color=ax_vals.labelcolor)
         ax_vals.set_ylabel('$\sigma_n$', color=ax_vals.labelcolor)
         legend = ax_vals.legend(title='Singular Values', loc='upper center', bbox_to_anchor=(0.5, 1.25),
                            markerscale=0, handlelength=0, handletextpad=0, fancybox=True, shadow=True,
                            fontsize='large')
         legend.get_title().set_fontsize('large')
-        ax_vals.set_xlim([0, k])
+        ax_vals.set_xlim([1, k])
         ax_vals.set_ylim(bottom=0)
         ax_vals.locator_params(axis='y', nticks=6)
         ax_vals.ticklabel_format(style='sci', axis='y', scilimits=(0,0))

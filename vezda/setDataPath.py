@@ -76,15 +76,26 @@ def cli():
                     if '.npy' in receiverFile and Path(os.path.join(dataPath, receiverFile)).exists():
                         receivers = os.path.join(dataPath, receiverFile)
                         userResponded = True
-                        break
                     elif '.npy' in receiverFile and not Path(os.path.join(dataPath, receiverFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(receiverFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                              
+                              Enter 'y/yes' to specify another filename containing the receiver coordinates
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(receiverFile)))
                     elif '.npy' not in receiverFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(receiverFile))
-                        break  
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the receiver coordinates
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(receiverFile)))
                 elif answer == 'n' or answer == 'no' or answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')                
+                    sys.exit('Exiting program.\n')                
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
         
@@ -99,7 +110,8 @@ def cli():
                  Warning: Expected file \'sourcesPoints.npy\' not found. Does a file
                  exist containing the source coordinates? (This is NOT a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the source coordinates (must be binary NumPy '.npy' format).
+                 Enter 'y/yes' to specify the filename containing the source coordinates
+                 (must be binary NumPy '.npy' format).
                  Enter 'n/no' to proceed without specifying the source coordinates. (Default)
                  Enter 'q/quit to exit this program.
                  '''))
@@ -111,20 +123,32 @@ def cli():
                         sources = os.path.join(dataPath, sourceFile)
                         noSources = False
                         userResponded = True
-                        break
                     elif '.npy' in sourceFile and not Path(os.path.join(dataPath, sourceFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(sourceFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                                
+                              Enter 'y/yes' to specify another filename containing the source coordinates
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the source coordinates. (Default)
+                              Enter 'q/quit to exit this program.
+                              ''' %(sourceFile)))
                     elif '.npy' not in sourceFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(sourceFile))
-                        break  
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the source coordinates
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the source coordinates. (Default)
+                              Enter 'q/quit to exit this program.
+                              ''' %(sourceFile)))
                 elif answer == '' or answer == 'n' or answer == 'no':
                     print('Proceeding without specifying the source coordinates.')
                     noSources = True
                     userResponded = True
-                    break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')                
+                    sys.exit('Exiting program.\n')                
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
@@ -139,8 +163,8 @@ def cli():
                  Warning: Expected file \'scattererPoints.npy\' not found. Does a file
                  exist containing the scatterer coordinates? (This is NOT a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the coordinates of the
-                 scatterer (must be binary NumPy '.npy' format).
+                 Enter 'y/yes' to specify the filename containing the scatterer coordinates
+                 (must be binary NumPy '.npy' format).
                  Enter 'n/no' to proceed without specifying the scatterer coordinates. (Default)
                  Enter 'q/quit' to exit this program.
                  '''))
@@ -152,20 +176,32 @@ def cli():
                         scatterer = os.path.join(dataPath, scattererFile)
                         noScatterer = False
                         userResponded = True
-                        break
                     elif '.npy' in scattererFile and not Path(os.path.join(dataPath, scattererFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(scattererFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                                
+                              Enter 'y/yes' to specify another filename containing the scatterer coordinates
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the scatterer coordinates. (Default)
+                              Enter 'q/quit' to exit this program.
+                              ''' %(scattererFile)))
                     elif '.npy' not in scattererFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(scattererFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the scatterer coordinates
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the scatterer coordinates. (Default)
+                              Enter 'q/quit' to exit this program.
+                              ''' %(scattererFile)))
                 elif answer == '' or answer == 'n' or answer == 'no':
                     print('Proceeding without specifying the scatterer coordinates.')
                     noScatterer = True
                     userResponded = True
-                    break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
@@ -190,15 +226,26 @@ def cli():
                     if '.npy' in timeFile and Path(os.path.join(dataPath, timeFile)).exists():
                         recordingTimes = os.path.join(dataPath, timeFile)
                         userResponded = True
-                        break
                     elif '.npy' in timeFile and not Path(os.path.join(dataPath, timeFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(timeFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                              
+                              Enter 'y/yes' to specify another filename containing the recording times
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(timeFile)))
                     elif '.npy' not in timeFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(timeFile))
-                        break  
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the recording times
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(timeFile)))
                 elif answer == 'n' or answer == 'no' or answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')                
+                    sys.exit('Exiting program.\n')                
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
@@ -223,15 +270,26 @@ def cli():
                     if '.npy' in dataFile and Path(os.path.join(dataPath, dataFile)).exists():
                         recordedData = os.path.join(dataPath, dataFile)
                         userResponded = True
-                        break
                     elif '.npy' in dataFile and not Path(os.path.join(dataPath, dataFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(dataFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                              
+                              Enter 'y/yes' to specify another filename containing the recorded waves
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(dataFile)))
                     elif '.npy' not in dataFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(dataFile))
-                        break  
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the recorded waves
+                              (must be binary NumPy '.npy' format). (Default)
+                              Enter 'n/no' or 'q/quit to exit this program.
+                              ''' %(dataFile)))
                 elif answer == 'n' or answer == 'no' or answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')                
+                    sys.exit('Exiting program.\n')                
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
@@ -246,8 +304,8 @@ def cli():
                  Warning: Expected file \'testFunctions.npy\' not found. Does a file
                  exist containing the simulated test functions? (This is NOT a required file.)
                  
-                 Enter 'y/yes' to specify the filename containing the simulated test
-                 functions (must be binary NumPy '.npy' format).
+                 Enter 'y/yes' to specify the filename containing the simulated test functions
+                 (must be binary NumPy '.npy' format).
                  Enter 'n/no' to proceed without specifying the test functions. (Default)
                  Enter 'q/quit' to exit this program.
                  '''))
@@ -259,20 +317,32 @@ def cli():
                         testFuncs = os.path.join(dataPath, testFuncsFile)
                         noTestFuncs = False
                         userResponded = True
-                        break
                     elif '.npy' in testFuncsFile and not Path(os.path.join(dataPath, testFuncsFile)).exists():
-                        print('Error: file \'%s\' does not exist within the current directory.' %(testFuncsFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' does not exist within the specified data directory.
+                              
+                              Enter 'y/yes' to specify another filename containing the simulated test functions
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the test functions. (Default)
+                              Enter 'q/quit' to exit this program.
+                              ''' %(testFuncsFile)))
                     elif '.npy' not in testFuncsFile:
-                        print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(testFuncsFile))
-                        break
+                        print(textwrap.dedent(
+                              '''
+                              Error: File \'%s\' is not NumPy '.npy' format.
+                              
+                              Enter 'y/yes' to specify another filename containing the simulated test functions
+                              (must be binary NumPy '.npy' format).
+                              Enter 'n/no' to proceed without specifying the test functions. (Default)
+                              Enter 'q/quit' to exit this program.
+                              ''' %(testFuncsFile)))
                 elif answer == '' or answer == 'n' or answer == 'no':
                     print('Proceeding without specifying the simulated test functions.')
                     noTestFuncs = True
                     userResponded = True
-                    break
                 elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.')
+                    sys.exit('Exiting program.\n')
                 else:
                     print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
     
@@ -301,15 +371,26 @@ def cli():
                         if '.npy' in samplingPointsFile and Path(os.path.join(dataPath, samplingPointsFile)).exists():
                             samplingPoints = os.path.join(dataPath, samplingPointsFile)
                             userResponded = True
-                            break
                         elif '.npy' in samplingPointsFile and not Path(os.path.join(dataPath, samplingPointsFile)).exists():
-                            print('Error: file \'%s\' does not exist within the current directory.' %(samplingPointsFile))
-                            break
+                            print(textwrap.dedent(
+                                  '''
+                                  Error: File \'%s\' does not exist within the specified data directory.
+                                  
+                                  Enter 'y/yes' to specify another filename containing the sampling points
+                                  (must be binary NumPy '.npy' format). (Default)
+                                  Enter 'n/no' or 'q/quit' to exit this program.
+                                  ''' %(samplingPointsFile)))
                         elif '.npy' not in samplingPointsFile:
-                            print('''Error: file \'%s\' is not NumPy '.npy' format.''' %(samplingPointsFile))
-                            break
+                            print(textwrap.dedent(
+                                  '''
+                                  Error: File \'%s\' is not NumPy '.npy' format.
+                                  
+                                  Enter 'y/yes' to specify another filename containing the sampling points
+                                  (must be binary NumPy '.npy' format). (Default)
+                                  Enter 'n/no' or 'q/quit' to exit this program.
+                                  ''' %(samplingPointsFile)))
                     elif answer == 'n' or answer == 'no' or answer == 'q' or answer == 'quit':
-                        sys.exit('Exiting program.')
+                        sys.exit('Exiting program.\n')
                     else:
                         print('Invalid response. Please enter \'y/yes\', \'n/no\', or \'q/quit\'.')
         

@@ -192,7 +192,7 @@ def cli():
             tnum = 1
             
         elif args.taxis is not None and all(v is None for v in [args.tstart, args.tstop, args.nt, args.tau]):
-            taxis = args.time.split(',')
+            taxis = args.taxis.split(',')
             if len(taxis) != 3:
                 sys.exit(textwrap.dedent(
                         '''

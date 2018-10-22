@@ -210,7 +210,7 @@ def sampleSpaceTime(receiverPoints, recordingTimes, velocity, tau, x, y, z=None,
 
 
 
-def samplingIsCurrent(Dict, recordingTimes, velocity, tau, x, y, z=None, peakFreq=None, peakTime=None):
+def samplingIsCurrent(Dict, receiverPoints, recordingTimes, velocity, tau, x, y, z=None, peakFreq=None, peakTime=None):
     if z is None:
         
         if peakFreq is None and peakTime is None:
@@ -221,13 +221,20 @@ def samplingIsCurrent(Dict, recordingTimes, velocity, tau, x, y, z=None, peakFre
                 if Dict['velocity'] == velocity:
                     print('Background velocity is consistent...')
                     
-                    if np.array_equal(Dict['time'], recordingTimes):
-                        print('Recording time interval is consistent...')
-                        return True
-                
+                    if np.isin(Dict['receivers'], receiverPoints).all():
+                        print('Receiver points are consistent...')
+                        
+                        if np.array_equal(Dict['time'], recordingTimes):
+                            print('Recording time interval is consistent...')
+                            return True
+                        
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            return False
+                    
                     else:
-                        print('Current recording time interval is inconsistent...')
-                        return False                                            
+                        print('Current receiver points are inconsistent...')
+                        return False
                     
                 else:
                     print('Current pulse function is inconsistent...')
@@ -245,13 +252,20 @@ def samplingIsCurrent(Dict, recordingTimes, velocity, tau, x, y, z=None, peakFre
                 if Dict['peakFreq'] == peakFreq and Dict['peakTime'] == peakTime and Dict['velocity'] == velocity:
                     print('Pulse function and background velocity are consistent...')
                     
-                    if np.array_equal(Dict['time'], recordingTimes):
-                        print('Recording time interval is consistent...')
-                        return True
+                    if np.isin(Dict['receivers'], receiverPoints).all():
+                        print('Receiver points are consistent...')
+                        
+                        if np.array_equal(Dict['time'], recordingTimes):
+                            print('Recording time interval is consistent...')
+                            return True
                 
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            return False                                            
+                    
                     else:
-                        print('Current recording time interval is inconsistent...')
-                        return False                                            
+                        print('Current receiver points are inconsistent...')
+                        return False
                     
                 else:
                     print('Current pulse function is inconsistent...')
@@ -272,13 +286,20 @@ def samplingIsCurrent(Dict, recordingTimes, velocity, tau, x, y, z=None, peakFre
                 if Dict['velocity'] == velocity:
                     print('Background velocity is consistent...')
                     
-                    if np.array_equal(Dict['time'], recordingTimes):
-                        print('Recording time interval is consistent...')
-                        return True
+                    if np.isin(Dict['receivers'], receiverPoints).all():
+                        print('Receiver points are consistent...')
+                    
+                        if np.array_equal(Dict['time'], recordingTimes):
+                            print('Recording time interval is consistent...')
+                            return True
                 
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            return False                                            
+                    
                     else:
-                        print('Current recording time interval is inconsistent...')
-                        return False                                            
+                        print('Current receiver points are inconsistent...')
+                        return False
                     
                 else:
                     print('Current pulse function is inconsistent...')
@@ -296,13 +317,20 @@ def samplingIsCurrent(Dict, recordingTimes, velocity, tau, x, y, z=None, peakFre
                 if Dict['peakFreq'] == peakFreq and Dict['peakTime'] == peakTime and Dict['velocity'] == velocity:
                     print('Pulse function and background velocity are consistent...')
                     
-                    if np.array_equal(Dict['time'], recordingTimes):
-                        print('Recording time interval is consistent...')
-                        return True
+                    if np.isin(Dict['receivers'], receiverPoints).all():
+                        print('Receiver points are consistent...')
+                    
+                        if np.array_equal(Dict['time'], recordingTimes):
+                            print('Recording time interval is consistent...')
+                            return True
                 
+                        else:
+                            print('Current recording time interval is inconsistent...')
+                            return False                                            
+                    
                     else:
-                        print('Current recording time interval is inconsistent...')
-                        return False                                            
+                        print('Current receiver points are inconsistent...')
+                        return False
                     
                 else:
                     print('Current pulse function is inconsistent...')

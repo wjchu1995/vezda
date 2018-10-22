@@ -39,7 +39,10 @@ def solver(medium, s, U, V, alpha):
     datadir = np.load('datadir.npz')
     recordingTimes = np.load(str(datadir['recordingTimes']))
     receiverPoints = np.load(str(datadir['receivers']))
-    sourcePoints = np.load(str(datadir['sources']))
+#    if 'sources' in datadir:
+#        sourcePoints = np.load(str(datadir['sources']))
+#    else:
+#        sourcePoints = None
     
     # Compute length of time step.
     # This parameter is used for FFT shifting and time windowing
@@ -64,10 +67,10 @@ def solver(medium, s, U, V, alpha):
         rstop = windowDict['rstop']
         rstep = windowDict['rstep']
         
-        # Source window parameters
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
+#        # Source window parameters
+#        sstart = windowDict['sstart']
+#        sstop = windowDict['sstop']
+#        sstep = windowDict['sstep']
         
     else:
         # Set default window parameters if user did
@@ -87,10 +90,14 @@ def solver(medium, s, U, V, alpha):
         rstop = receiverPoints.shape[0]
         rstep = 1
         
-        # Source window parameters
-        sstart = 0
-        sstop = sourcePoints.shape[0]
-        sstep = 1
+#        # Source window parameters
+#        sstart = 0
+#        if sourcePoints is None:
+#            recordedData = np.load(str(datadir['recordedData']))
+#            sstop = recordedData.shape[2]
+#        else:
+#            sstop = sourcePoints.shape[0]
+#        sstep = 1
         
     # Slice the recording times according to the time window parameters
     # to create a time window array
@@ -101,9 +108,11 @@ def solver(medium, s, U, V, alpha):
     rinterval = np.arange(rstart, rstop, rstep)
     receiverPoints = receiverPoints[rinterval, :]
 
-    # Slice the sourcePoints array according to the source window parametes
-    sinterval = np.arange(sstart, sstop, sstep)
-    sourcePoints = sourcePoints[sinterval, :]    
+#    # Slice the sourcePoints array according to the source window parametes
+#    sinterval = np.arange(sstart, sstop, sstep)
+#    if sourcePoints is not None:
+#        # Slice the sourcePoints array according to the source window parametes
+#        sourcePoints = sourcePoints[sinterval, :]  
     
     Nr = receiverPoints.shape[0]
     Nt = len(recordingTimes)    # number of samples in time window
@@ -178,7 +187,7 @@ def solver(medium, s, U, V, alpha):
                 print('Checking consistency with current space-time sampling grid and pulse function...')
                 TFDict = np.load('VZTestFuncs.npz')
                 
-                if samplingIsCurrent(TFDict, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
                     print('Moving forward to imaging algorithm...')
                     TFarray = TFDict['TFarray']
                     
@@ -187,7 +196,7 @@ def solver(medium, s, U, V, alpha):
                     TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
                                                               velocity, tau, x, y, z, pulse)
                     
-                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, tau=tau, samplingPoints=samplingPoints)
                 
@@ -196,7 +205,7 @@ def solver(medium, s, U, V, alpha):
                 TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
                                                           velocity, tau, x, y, z, pulse)
                     
-                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
@@ -507,7 +516,7 @@ def solver(medium, s, U, V, alpha):
                          Enter 'q/quit' to abort the calculation.
                          '''))
                         
-            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
@@ -555,7 +564,7 @@ def solver(medium, s, U, V, alpha):
                 print('Checking consistency with current space-time sampling grid and pulse function...')
                 TFDict = np.load('VZTestFuncs.npz')
                 
-                if samplingIsCurrent(TFDict, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
                     print('Moving forward to imaging algorithm...')
                     TFarray = TFDict['TFarray']
                     
@@ -564,7 +573,7 @@ def solver(medium, s, U, V, alpha):
                     TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
                                                               velocity, tau, x, y, z, pulse)
                     
-                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                    np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
                 
@@ -573,7 +582,7 @@ def solver(medium, s, U, V, alpha):
                 TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
                                                           velocity, tau, x, y, z, pulse)
                     
-                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+                np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
             
@@ -1258,7 +1267,7 @@ def solver(medium, s, U, V, alpha):
                          Enter 'q/quit' to abort the calculation.
                          '''))
                         
-            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes,
+            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                      x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
         

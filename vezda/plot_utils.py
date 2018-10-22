@@ -259,54 +259,65 @@ def set_ylabel(N, coordinates, pltstart, flag, plotParams):
         ylabel = 'Source'
     
     if N == 1:
-        # get units for x,y,z axes from plotParams
-        xu = plotParams['xu']
-        yu = plotParams['yu']
-        zu = plotParams['zu']
         
         # get amplitude units from plotParams
         au = plotParams['au']
         
-        # update ylabel to also show amplitude and coordinate information
-        if coordinates.shape[1] == 2:
-            if au != '' and xu != '' and yu != '':
-                ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
-                                                                           coordinates[0, 0], xu,
-                                                                           coordinates[0, 1], yu)
-            elif au == '' and xu != '' and yu != '':
-                ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
-                                                                      coordinates[0, 0], xu,
-                                                                      coordinates[0, 1], yu)
-            elif au != '' and xu == '' and yu == '':
-                ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f)]' %(au, ylabel, pltstart,
-                                                                     coordinates[0, 0],
-                                                                     coordinates[0, 1])
-            elif au == '' and xu == '' and yu == '':
-                ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f)]' %(ylabel, pltstart,
-                                                                coordinates[0, 0],
-                                                                coordinates[0, 1])
+        if coordinates is not None:
+            # get units for x and y axes from plotParams
+            xu = plotParams['xu']
+            yu = plotParams['yu']
+        
+            # update ylabel to also show amplitude and coordinate information
+            if coordinates.shape[1] == 2:
+                if au != '' and xu != '' and yu != '':
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
+                                                                               coordinates[0, 0], xu,
+                                                                               coordinates[0, 1], yu)
+                elif au == '' and xu != '' and yu != '':
+                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
+                                                                          coordinates[0, 0], xu,
+                                                                          coordinates[0, 1], yu)
+                elif au != '' and xu == '' and yu == '':
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f)]' %(au, ylabel, pltstart,
+                                                                         coordinates[0, 0],
+                                                                         coordinates[0, 1])
+                elif au == '' and xu == '' and yu == '':
+                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f)]' %(ylabel, pltstart,
+                                                                    coordinates[0, 0],
+                                                                    coordinates[0, 1])
                     
-        elif coordinates.shape[1] == 3:
-            if au != '' and xu != '' and yu != '' and zu != '':
-                ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
-                                                                                     coordinates[0, 0], xu,
-                                                                                     coordinates[0, 1], yu,
-                                                                                     coordinates[0, 2], zu)
-            elif au == '' and xu != '' and yu != '' and zu != '':
-                ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
-                                                                                coordinates[0, 0], xu,
-                                                                                coordinates[0, 1], yu,
-                                                                                coordinates[0, 2], zu)
-            elif au != '' and xu == '' and yu == '' and zu == '':
-                ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(au, ylabel, pltstart,
-                                                                            coordinates[0, 0],
-                                                                            coordinates[0, 1],
-                                                                            coordinates[0, 2])
-            elif au == '' and xu == '' and yu == '' and zu == '':
-                ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(ylabel, pltstart,
-                                                                       coordinates[0, 0],
-                                                                       coordinates[0, 1],
-                                                                       coordinates[0, 2])
+            elif coordinates.shape[1] == 3:
+                # get units for z axis from plotParams
+                zu = plotParams['zu']
+            
+                if au != '' and xu != '' and yu != '' and zu != '':
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
+                                                                                         coordinates[0, 0], xu,
+                                                                                         coordinates[0, 1], yu,
+                                                                                         coordinates[0, 2], zu)
+                elif au == '' and xu != '' and yu != '' and zu != '':
+                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
+                                                                                    coordinates[0, 0], xu,
+                                                                                    coordinates[0, 1], yu,
+                                                                                    coordinates[0, 2], zu)
+                elif au != '' and xu == '' and yu == '' and zu == '':
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(au, ylabel, pltstart,
+                                                                                coordinates[0, 0],
+                                                                                coordinates[0, 1],
+                                                                                coordinates[0, 2])
+                elif au == '' and xu == '' and yu == '' and zu == '':
+                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(ylabel, pltstart,
+                                                                           coordinates[0, 0],
+                                                                           coordinates[0, 1],
+                                                                           coordinates[0, 2])
+        else:   # coordinates is None
+            
+            # update ylabel to also show amplitude information
+            if au != '':
+                ylabel = 'Amplitude (%s) [%s %s]' %(au, ylabel, pltstart)
+            else:
+                ylabel = 'Amplitude [%s %s]' %(ylabel, pltstart)
     
     return ylabel
 
@@ -387,14 +398,16 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
         
         if sourcePoints is None:
             if receiverPoints.shape[1] == 2:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
                 if scatterer is not None and plotParams['show_scatterer']:
                     ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                   
             elif receiverPoints.shape[1] == 3:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
                 if scatterer is not None and plotParams['show_scatterer']:
                     ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
@@ -412,22 +425,24 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
             
         else:   # sourcePoints exist
             if receiverPoints.shape[1] == 2:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
-                if flag == 'data':
+                if flag == 'data' and plotParams['show_sources']:
                     ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '*', color=ax.sourcecolor)
         
                 elif flag == 'testfunc':
-                    ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '.', color=ax.sourcecolor)
+                        ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], '.', color=ax.sourcecolor)
         
                 if scatterer is not None and plotParams['show_scatterer']:
                     ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                 
             elif receiverPoints.shape[1] == 3:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
-                if flag == 'data' and sourcePoints is not None:
+                if flag == 'data' and plotParams['show_sources']:
                     ax.plot(sourcePoints[:, 0], sourcePoints[:, 1], sourcePoints[:, 2], '*', color=ax.sourcecolor)
         
                 elif flag == 'testfunc':
@@ -453,14 +468,16 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
         
         if sourcePoints is None:
             if receiverPoints.shape[1] == 2:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
                 if scatterer is not None and plotParams['show_scatterer']:
                     ax.plot(scatterer[:, 0], scatterer[:, 1], '--', color=ax.scatterercolor)
                 
                   
             elif receiverPoints.shape[1] == 3:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
                 if scatterer is not None and plotParams['show_scatterer']:
                     ax.plot(scatterer[:, 0], scatterer[:, 1], scatterer[:, 2], '--', color=ax.scatterercolor)
@@ -482,9 +499,10 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
             currentSource = sourcePoints[index, :]
     
             if receiverPoints.shape[1] == 2:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], 'v', color=ax.receivercolor)
         
-                if flag == 'data':
+                if flag == 'data' and plotParams['show_sources']:
                     ax.plot(sources[:, 0], sources[:, 1], '*', color=ax.inactivesourcecolor)
                     ax.plot(currentSource[0], currentSource[1], marker='*', markersize=12, color=ax.activesourcecolor)
         
@@ -497,9 +515,10 @@ def plotMap(ax, index, receiverPoints, sourcePoints, scatterer, flag, plotParams
                 
                   
             elif receiverPoints.shape[1] == 3:
-                ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
+                if plotParams['show_receivers']:
+                    ax.plot(receiverPoints[:, 0], receiverPoints[:, 1], receiverPoints[:, 2], 'v', color=ax.receivercolor)
         
-                if flag == 'data':
+                if flag == 'data' and plotParams['show_sources']:
                     ax.plot(sources[:, 0], sources[:, 1], sources[:, 2], '*', color=ax.inactivesourcecolor)
                     ax.plot(currentSource[0], currentSource[1], currentSource[2], marker='*', markersize=12, color=ax.activesourcecolor)
         
@@ -664,7 +683,7 @@ def plotImage(Dict, plotParams, flag, spacetime=False, movie=False):
         image_viewer(ax1, Image, plotParams, alpha, X, Y, Z)
     
         
-    if flag == 'telsm' and spacetime:
+    if flag == 'NFE' and spacetime:
         x = X[:, 0]
         y = Y[0, :]
         
@@ -1008,7 +1027,7 @@ def process_key_vectors(event, time, t0, tf, pltrstart, pltsstart,
 def next_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plotParams):
     volume = ax.volume
     ax.index = (ax.index + 1) % volume.shape[2]
-    title = vector_title(flag, ax.index)
+    title = vector_title(flag, ax.index + 1)
     plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, interval, 
                 coordinates, title, flag, plotParams)
 
@@ -1017,7 +1036,7 @@ def next_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plotPar
 def previous_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plotParams):
     volume = ax.volume
     ax.index = (ax.index - 1) % volume.shape[2]  # wrap around using %
-    title = vector_title(flag, ax.index)
+    title = vector_title(flag, ax.index + 1)
     plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, interval,
                 coordinates, title, flag, plotParams)
     

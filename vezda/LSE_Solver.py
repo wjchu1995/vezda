@@ -28,8 +28,40 @@ def solver(s, U, V, alpha):
     datadir = np.load('datadir.npz')
     recordingTimes = np.load(str(datadir['recordingTimes']))
     receiverPoints = np.load(str(datadir['receivers']))
-    sourcePoints = np.load(str(datadir['sources']))
-    recordedData = np.load(str(datadir['recordedData']))
+    if 'sources' in datadir:
+        sourcePoints = np.load(str(datadir['sources']))
+    else:
+        sourcePoints = None
+    if Path('noisyData.npy').exists():
+        userResponded = False
+        print(textwrap.dedent(
+              '''
+              Detected that band-limited noise has been added to the data array.
+              Would you like to solve the Lippmann-Schwinger equation with the 
+              noisy data? ([y]/n)
+              
+              Enter 'q/quit' exit the program.
+              '''))
+        while userResponded == False:
+            answer = input('Action: ')
+            if answer == '' or answer == 'y' or answer == 'yes':
+                print('Proceeding with solution of Lippmann-Schwinger equation with noisy data...')
+                # read in the noisy data array
+                recordedData = np.load('noisyData.npy')
+                userResponded = True
+            elif answer == 'n' or answer == 'no':
+                print('Proceeding with solution of Lippmann-Schwinger equation with noise-free data...')
+                # read in the recorded data array
+                recordedData  = np.load(str(datadir['recordedData']))
+                userResponded = True
+            elif answer == 'q' or answer == 'quit':
+                sys.exit('Exiting program.\n')
+            else:
+                print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
+                
+        else:
+            # read in the recorded data array
+            recordedData  = np.load(str(datadir['recordedData']))
     
     # Compute length of time step.
     # This parameter is used for FFT shifting and time windowing
@@ -55,6 +87,7 @@ def solver(s, U, V, alpha):
         rstep = windowDict['rstep']
         
         # Source window parameters
+        slabel = windowDict['slabel']
         sstart = windowDict['sstart']
         sstop = windowDict['sstop']
         sstep = windowDict['sstep']
@@ -78,8 +111,12 @@ def solver(s, U, V, alpha):
         rstep = 1
         
         # Source window parameters
+        if sourcePoints is None:
+            slabel = 'recordings'
+        else:
+            slabel = 'sources'
         sstart = 0
-        sstop = sourcePoints.shape[0]
+        sstop = recordedData.shape[2]
         sstep = 1
         
     # Slice the recording times according to the time window parameters
@@ -90,17 +127,18 @@ def solver(s, U, V, alpha):
     # Slice the receiverPoints array according to the receiver window parametes
     rinterval = np.arange(rstart, rstop, rstep)
     receiverPoints = receiverPoints[rinterval, :]
-
-    # Slice the sourcePoints array according to the source window parametes
+    
     sinterval = np.arange(sstart, sstop, sstep)
-    sourcePoints = sourcePoints[sinterval, :]
+    if sourcePoints is not None:
+        # Slice the sourcePoints array according to the source window parametes
+        sourcePoints = sourcePoints[sinterval, :]
 
     recordedData = recordedData[rinterval, :, :]
     recordedData = recordedData[:, tinterval, :]
     recordedData = recordedData[:, :, sinterval]
     
     Nr = receiverPoints.shape[0]
-    Ns = sourcePoints.shape[0]
+    Ns = recordedData.shape[2]
     Nt = len(recordingTimes)    # number of samples in time window
     
     # Get machine precision
@@ -158,7 +196,7 @@ def solver(s, U, V, alpha):
             Histogram[:, :, 0] = Image
                 
         else:                
-            for i in trange(Ns, desc='Summing over sources'):
+            for i in trange(Ns, desc='Summing over %s' %(slabel)):
                 data = np.reshape(recordedData[:, :, i], (Nt * Nr, 1))
                 chi_alpha = Tikhonov(U, s, V, data, alpha)
                 chi_alpha = np.reshape(chi_alpha, (Nx * Ny, Nt))
@@ -211,7 +249,7 @@ def solver(s, U, V, alpha):
             Histogram[:, :, 0] = Image
                 
         else:                
-            for i in trange(Ns, desc='Sum over sources'):
+            for i in trange(Ns, desc='Summing over %s' %(slabel)):
                 data = np.reshape(recordedData[:, :, i], (Nt * Nr, 1))
                 chi_alpha = Tikhonov(U, s, V, data, alpha)
                 chi_alpha = np.reshape(chi_alpha, (Nx * Ny * Nz, Nt))

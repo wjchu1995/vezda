@@ -20,7 +20,7 @@ with open('README.md', 'r') as fh:
      long_description = fh.read()
 
 setup(name = 'vezda',
-      version = '0.4.5',
+      version = '0.4.6',
       description = 'A set of command-line tools for imaging with the linear sampling method',
       long_description = long_description,
       long_description_content_type = 'text/markdown',
@@ -56,11 +56,13 @@ setup(name = 'vezda',
                       'vzgrid = vezda.setSamplingGrid:cli',
                       'vzhome = vezda.home:cli',
                       'vzimage = vezda.plotImage:cli',
+                      'vznoise = vezda.addNoise:cli',
                       'vzpicard = vezda.Picard:cli',
                       'vzsolve = vezda.Solve:cli',
+                      'vzspectra = vezda.plotSpectra:cli',
                       'vzsvd = vezda.SVD:cli',
                       'vzwiggles = vezda.plotWiggles:cli',
                       'vzwindow = vezda.setWindow:cli'
                       ]
-              },
+              },      
       zip_safe = False)

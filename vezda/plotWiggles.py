@@ -146,7 +146,36 @@ def cli():
     if args.type == 'data':
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
-        X = np.load(str(datadir['recordedData']))
+        if Path('noisyData.npy').exists():
+            userResponded = False
+            print(textwrap.dedent(
+                  '''
+                  Detected that band-limited noise has been added to the data array.
+                  Would you like to plot the noisy data? ([y]/n)
+                    
+                  Enter 'q/quit' exit the program.
+                  '''))
+            while userResponded == False:
+                answer = input('Action: ')
+                if answer == '' or answer == 'y' or answer == 'yes':
+                    print('Proceeding with plot of noisy data...')
+                    # read in the noisy data array
+                    X = np.load('noisyData.npy')
+                    userResponded = True
+                elif answer == 'n' or answer == 'no':
+                    print('Proceeding with plot of noise-free data...')
+                    # read in the recorded data array
+                    X  = np.load(str(datadir['recordedData']))
+                    userResponded = True
+                elif answer == 'q' or answer == 'quit':
+                    sys.exit('Exiting program.\n')
+                else:
+                    print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
+            
+        else:
+            # read in the recorded data array
+            X  = np.load(str(datadir['recordedData']))
+        
         time = recordingTimes
         if 'sources' in datadir:
             sourcePoints = np.load(str(datadir['sources']))
@@ -184,7 +213,7 @@ def cli():
             peakTime = pulseFun.peakTime
             
             time = recordingTimes[tinterval]
-            if samplingIsCurrent(TFDict, time, velocity, tau, x, y, z, peakFreq, peakTime):
+            if samplingIsCurrent(TFDict, receiverPoints, time, velocity, tau, x, y, z, peakFreq, peakTime):
                 print('Moving forward to plot test functions...')
                 X = TFDict['TFarray']
                 X = X[rinterval, :, :]
@@ -197,11 +226,11 @@ def cli():
                                                   velocity, tau, x, y, z, pulse)
                     
                 if z is None:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, tau=tau, samplingPoints=sourcePoints)
                 else:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
@@ -262,11 +291,11 @@ def cli():
                                                           tau, x, y, z, pulse)
                     
                         if z is None:
-                            np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                            np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                      x=x, y=y, tau=tau, samplingPoints=sourcePoints)
                         else:
-                            np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                            np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                                      peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                                      x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
@@ -302,11 +331,11 @@ def cli():
                                               tau, x, y, z, pulse)
                     
             if z is None:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, tau=tau, samplingPoints=sourcePoints)
             else:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=time,
+                np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
             

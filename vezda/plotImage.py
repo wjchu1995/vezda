@@ -86,7 +86,7 @@ def cli():
         
         # for both wiggle plots and image plots
         if args.format is not None:
-            plotParams['pltformat'] = args.pltformat
+            plotParams['pltformat'] = args.format
         
         if args.mode is not None:
             plotParams['view_mode'] = args.mode
@@ -173,7 +173,7 @@ def cli():
         # updated parameters based on passed arguments
         #for both image and wiggle plots
         if args.format is not None:
-            plotParams['pltformat'] = args.pltformat
+            plotParams['pltformat'] = args.format
             
         # for image/map plots
         if args.isolevel is not None:
@@ -261,6 +261,8 @@ def cli():
     
     if 'sources' in datadir:
         sourcePoints = np.load(str(datadir['sources']))
+    else:
+        sourcePoints = None
     
     if 'scatterer' in datadir and plotParams['show_scatterer']:
         scatterer = np.load(str(datadir['scatterer']))  
@@ -290,13 +292,14 @@ def cli():
         rinterval = np.arange(rstart, rstop, rstep)
         receiverPoints = receiverPoints[rinterval, :]
         
-        # Apply the source window
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
+        if sourcePoints is not None:
+            # Apply the source window
+            sstart = windowDict['sstart']
+            sstop = windowDict['sstop']
+            sstep = windowDict['sstep']
         
-        sinterval = np.arange(sstart, sstop, sstep)
-        sourcePoints = sourcePoints[sinterval, :]
+            sinterval = np.arange(sstart, sstop, sstep)
+            sourcePoints = sourcePoints[sinterval, :]
         
     #==============================================================================
     
@@ -320,7 +323,7 @@ def cli():
         tau = Dict['tau']
         Ntau = len(tau)
         alpha = Dict['alpha']
-        flag = 'telsm'
+        flag = 'NFE'
         fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
         if otherImages:
             if len(otherImages) == 2:
@@ -339,7 +342,7 @@ def cli():
             
         # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
         Dict = np.load('imageLSE.npz')
-        flag = 'clsm'
+        flag = 'LSE'
         fig1, ax1 = plotImage(Dict, plotParams, flag)
         
     
@@ -356,7 +359,7 @@ def cli():
             tau = Dict['tau']
             Ntau = len(tau)
             alpha = Dict['alpha']
-            flag = 'telsm'
+            flag = 'NFE'
             fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
             if otherImages:
                 if len(otherImages) == 2:
@@ -368,7 +371,7 @@ def cli():
         elif not args.nfe and args.lse:
             # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
             Dict = np.load('imageLSE.npz')
-            flag = 'clsm'
+            flag = 'LSE'
             fig1, ax1 = plotImage(Dict, plotParams, flag)
             
         
@@ -423,12 +426,18 @@ def cli():
     #==============================================================================
     
     pltformat = plotParams['pltformat']
-    plt.tight_layout()
+    plt.tight_layout()    
     fig1.savefig('image' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
     
-    if flag == 'telsm' and args.spacetime:
+    if flag == 'NFE' and args.spacetime:
         remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
-        fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
+        if Z is None:
+            fig3.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
+            fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
+                                                                                    alpha, X, Y, Z, Ntau, tau))
+        else:
+            fig2.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
+            fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
                                                                                     alpha, X, Y, Z, Ntau, tau))
     
     plt.show()
