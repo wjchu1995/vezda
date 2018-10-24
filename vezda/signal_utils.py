@@ -32,8 +32,8 @@ def add_noise(data, dt, min_freq, max_freq, snr=2):
     '''
     
     signalPower = np.sum(data**2, axis=1)
-    noisyData = np.zeros(data.shape)
     Nr, Nt, Ns = data.shape
+    noisyData = np.zeros((Nr, Nt, Ns))
     for r in range(Nr):
         for s in range(Ns):
             noise = band_limited_noise(min_freq, max_freq, Nt, 1 / dt)
