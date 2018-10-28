@@ -337,22 +337,40 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
     if N > 1:
         ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
         ax.set_ylabel(ylabel, color=ax.labelcolor)
-        ax.set_yticks(interval)                
-        ax.set_yticklabels(interval)
-        plt.setp(ax.get_yticklabels(), visible=True)
-        plt.setp(ax.get_yticklines(), visible=True)
         
-        # rescale all wiggle traces by largest displacement range
-        scaleFactor = np.max(np.ptp(X, axis=1))
-        if scaleFactor != 0:
-            X /= scaleFactor
+        if N <= 18:
+            ax.set_yticks(interval)                
+            ax.set_yticklabels(interval)
+            plt.setp(ax.get_yticklabels(), visible=True)
+            plt.setp(ax.get_yticklines(), visible=True)
             
-        for n in range(N):
-            ax.plot(time, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
-            ax.fill_between(time, interval[n], interval[n] + X[n, :],
-                            where=(interval[n] + X[n, :] > interval[n]), color='m', alpha=ax.alpha)
-            ax.fill_between(time, interval[n], interval[n] + X[n, :],
-                            where=(interval[n] + X[n, :] < interval[n]), color='c', alpha=ax.alpha)
+            # rescale all wiggle traces by largest displacement range
+            scaleFactor = np.max(np.ptp(X, axis=1))
+            if scaleFactor != 0:
+                X /= scaleFactor
+            
+            for n in range(N):
+                ax.plot(time, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
+                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                                where=(interval[n] + X[n, :] > interval[n]), color='m', alpha=ax.alpha)
+                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                                where=(interval[n] + X[n, :] < interval[n]), color='c', alpha=ax.alpha)
+                
+        elif N > 18 and N <= 70:            
+            # rescale all wiggle traces by largest displacement range
+            scaleFactor = np.max(np.ptp(X, axis=1))
+            if scaleFactor != 0:
+                X /= scaleFactor
+            
+            for n in range(N):
+                ax.plot(time, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
+                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                                where=(interval[n] + X[n, :] > interval[n]), color='m', alpha=ax.alpha)
+                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                                where=(interval[n] + X[n, :] < interval[n]), color='c', alpha=ax.alpha)
+        
+        else:            
+            ax.pcolormesh(time, interval, X, cmap='Greys')
                         
     else: # N == 1
         ax.yaxis.get_offset_text().set_x(-0.1)
@@ -617,8 +635,9 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
             cax = divider.append_axes('right', size='5%', pad=0.05)
             cbar = plt.colorbar(im, cax=cax)                
             cbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            cbar.set_label(r'$\frac{1}{\vert\vert\varphi\vert\vert}$',
-                           labelpad=24, rotation=0, fontsize=18, color=ax.labelcolor)
+            if tau is not None:
+                cbar.set_label(r'$\frac{1}{\vert\vert\varphi\vert\vert}$',
+                               labelpad=24, rotation=0, fontsize=18, color=ax.labelcolor)
         
         if alpha != 0:
             title = r'$\alpha = %0.1e$' %(alpha)

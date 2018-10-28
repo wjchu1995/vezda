@@ -59,9 +59,9 @@ def solver(s, U, V, alpha):
             else:
                 print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
                 
-        else:
-            # read in the recorded data array
-            recordedData  = np.load(str(datadir['recordedData']))
+    else:
+        # read in the recorded data array
+        recordedData  = np.load(str(datadir['recordedData']))
     
     # Compute length of time step.
     # This parameter is used for FFT shifting and time windowing
