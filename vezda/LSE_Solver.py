@@ -112,7 +112,7 @@ def solver(s, U, V, alpha):
         
         # Source window parameters
         if sourcePoints is None:
-            slabel = 'recordings'
+            slabel = 'records'
         else:
             slabel = 'sources'
         sstart = 0

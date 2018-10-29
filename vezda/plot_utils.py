@@ -856,7 +856,7 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
         data_title = plotParams['data_title']
         
         if sourcePoints is None:
-            title = '%s [Recording %s/%s]' %(data_title, sinterval[index], len(sinterval))
+            title = '%s [Record %s/%s]' %(data_title, sinterval[index], len(sinterval))
         
         elif sourcePoints.shape[1] == 2:
             if  xu != '' and yu != '':
