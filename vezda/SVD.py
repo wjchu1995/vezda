@@ -18,7 +18,7 @@ import sys
 import argparse
 import textwrap
 from pathlib import Path
-from scipy.sparse.linalg import eigsh
+from scipy.sparse.linalg import svds
 from scipy.signal import tukey
 import matplotlib
 matplotlib.use('Qt5Agg')
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from vezda.sampling_utils import samplingIsCurrent, sampleSpaceTime
 from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
                               process_key_vectors, default_params, setFigure)
-from vezda.LinearOperators import asSymmetricConvolutionOperator
+from vezda.LinearOperators import asConvolutionOperator
 import numpy as np
 import pickle
 import time
@@ -614,32 +614,28 @@ def cli():
             Nr, Nt, Ns = X.shape
             
         #==============================================================================
-        # Compute the k largest algebraic eigenvalues (which='LA') of the operator A
-        # Eigenvalues are elements of the vector 's'
-        # Eigenvectors are columns of 'W'
-        # Singular values of nearFieldMatrix are equivalent to eigenvalues of A
-        # Left singular vectors are the first Nt * Nr eigenvectors of W
-        # Right singular vectors are the last Nt * Ns eigenvectors of W
+        # Compute the k largest singular values (which='LM') of the operator A
+        # Singular values are elements of the vector 's'
+        # Left singular vectors are columns of 'U'
+        # Right singular vectors are columns of 'V'
         
-        A = asSymmetricConvolutionOperator(X)
+        A = asConvolutionOperator(X)
         
         if k == 1:
             print('Computing SVD of the %s for 1 singular value/vector...' %(objectString))
         else:
             print('Computing SVD of the %s for %s singular values/vectors...' %(objectString, k))
         startTime = time.time()
-        s, W = eigsh(A, k, which='LA')
+        U, s, VT = svds(A, k, which='LM')
         endTime = time.time()
         print('Elapsed time:', humanReadable(endTime - startTime), '\n')
         
-        # sort the eigenvalues and corresponding eigenvectors in descending order
+        # sort the singular values and corresponding vectors in descending order
         # (i.e., largest to smallest)
         index = s.argsort()[::-1]   
         s = s[index]
-        W = W[:, index]
-        
-        U = np.sqrt(2) * W[:(Nt * Nr), :]         # left singular vectors
-        V = np.sqrt(2) * W[-(Nt * Ns):, :]        # right singular vectors
+        U = U[:, index]
+        V = VT[index, :].T
         
         # Write binary output with numpy
         if args.nfo:

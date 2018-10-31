@@ -20,7 +20,7 @@ if sys.version_info <= (2,7):
 #     long_description = fh.read()
 
 setup(name = 'vezda',
-      version = '0.4.10',
+      version = '0.4.11',
       description = 'A set of command-line tools for imaging with the linear sampling method',
       #long_description = long_description,
       #long_description_content_type = 'text/markdown',
