@@ -17,12 +17,16 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import FormatStrFormatter
+import matplotlib.colors
 from skimage import measure
 from pathlib import Path
 from tqdm import trange
 
 #==============================================================================
 # General functions for plotting...
+
+customCmapL = matplotlib.colors.LinearSegmentedColormap.from_list('', ['cyan', 'whitesmoke', 'magenta'])
+customCmapD = matplotlib.colors.LinearSegmentedColormap.from_list('', ['cyan', 'black', 'magenta'])
 
 def default_params():
     '''
@@ -55,6 +59,7 @@ def default_params():
     plotParams['show_receivers'] = True
     
     # for wiggle plots
+    plotParams['pclip'] = 1
     plotParams['tu'] = ''
     plotParams['au'] = ''
     plotParams['data_title'] = 'Data'
@@ -63,7 +68,7 @@ def default_params():
     # for frequency plots
     plotParams['fu'] = ''
     plotParams['fmin'] = 0
-    plotParams['fmax'] = 1
+    plotParams['fmax'] = None
     plotParams['freq_title'] = 'Mean Amplitude Spectrum'
     plotParams['freq_ylabel'] = 'Amplitude'
     
@@ -96,6 +101,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('black')
             ax1.spines['top'].set_color('black')
             ax1.spines['bottom'].set_color('black')
+            ax1.cbaredgecolor = 'darkgray'
             ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.2
@@ -110,6 +116,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.inactivesourcecolor = 'darkgray'
             ax1.scatterercolor = 'darkgray'
             ax1.surfacecolor = 'c'
+            ax1.customcmap = customCmapL
         
         elif mode == 'dark':
             plt.rc('grid', linestyle='solid', color='dimgray')
@@ -124,6 +131,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('darkgray')
             ax1.spines['top'].set_color('darkgray')
             ax1.spines['bottom'].set_color('darkgray')
+            ax1.cbaredgecolor = 'darkgray'
             ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.5
@@ -138,6 +146,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.inactivesourcecolor = 'dimgray'
             ax1.scatterercolor = 'lightgray'
             ax1.surfacecolor = 'c'
+            ax1.customcmap = customCmapD
             
         return fig, ax1
             
@@ -159,6 +168,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('black')
             ax1.spines['top'].set_color('black')
             ax1.spines['bottom'].set_color('black')
+            ax1.cbaredgecolor = 'darkgray'
             ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.2
@@ -173,11 +183,13 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.inactivesourcecolor = 'darkgray'
             ax1.scatterercolor = 'darkgray'
             ax1.surfacecolor = 'c'
+            ax1.customcmap = customCmapL
             
             ax2.spines['left'].set_color('black')
             ax2.spines['right'].set_color('black')
             ax2.spines['top'].set_color('black')
             ax2.spines['bottom'].set_color('black')
+            ax2.cbaredgecolor = 'darkgray'
             ax2.alpha = 0.6
             ax2.shadecolor = 'black'
             ax2.shadealpha = 0.2
@@ -192,6 +204,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.inactivesourcecolor = 'darkgray'
             ax2.scatterercolor = 'darkgray'
             ax2.surfacecolor = 'c'
+            ax2.customcmap = customCmapL
             
         
         elif mode == 'dark':
@@ -207,6 +220,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.spines['right'].set_color('darkgray')
             ax1.spines['top'].set_color('darkgray')
             ax1.spines['bottom'].set_color('darkgray')
+            ax1.cbaredgecolor = 'darkgray'
             ax1.alpha = 0.6
             ax1.shadecolor = 'black'
             ax1.shadealpha = 0.5
@@ -221,6 +235,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax1.inactivesourcecolor = 'dimgray'
             ax1.scatterercolor = 'lightgray'
             ax1.surfacecolor = 'c'
+            ax1.customcmap = customCmapD
             
             ax2.tick_params(colors='555555')
             ax2.set_facecolor('darkslategray')
@@ -228,6 +243,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.spines['right'].set_color('darkgray')
             ax2.spines['top'].set_color('darkgray')
             ax2.spines['bottom'].set_color('darkgray')
+            ax2.cbaredgecolor = 'darkgray'
             ax2.alpha = 0.6
             ax2.shadecolor = 'black'
             ax2.shadealpha = 0.5
@@ -242,6 +258,7 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
             ax2.inactivesourcecolor = 'dimgray'
             ax2.scatterercolor = 'lightgray'
             ax2.surfacecolor = 'c'
+            ax2.customcmap = customCmapD
         
         return fig, ax1, ax2
 
@@ -330,7 +347,7 @@ def set_ylabel(N, coordinates, pltstart, flag, plotParams):
 
 
 
-def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, flag, plotParams):
+def plotWiggles(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title, flag, plotParams):
     ax.clear()
     N = X.shape[0]
     
@@ -350,10 +367,10 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
                 X /= scaleFactor
             
             for n in range(N):
-                ax.plot(time, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
-                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                ax.plot(xvals, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
+                ax.fill_between(xvals, interval[n], interval[n] + X[n, :],
                                 where=(interval[n] + X[n, :] > interval[n]), color='m', alpha=ax.alpha)
-                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                ax.fill_between(xvals, interval[n], interval[n] + X[n, :],
                                 where=(interval[n] + X[n, :] < interval[n]), color='c', alpha=ax.alpha)
                 
         elif N > 18 and N <= 70:            
@@ -363,27 +380,28 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
                 X /= scaleFactor
             
             for n in range(N):
-                ax.plot(time, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
-                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                ax.plot(xvals, interval[n] + X[n, :], color=ax.linecolor, linewidth=ax.linewidth)
+                ax.fill_between(xvals, interval[n], interval[n] + X[n, :],
                                 where=(interval[n] + X[n, :] > interval[n]), color='m', alpha=ax.alpha)
-                ax.fill_between(time, interval[n], interval[n] + X[n, :],
+                ax.fill_between(xvals, interval[n], interval[n] + X[n, :],
                                 where=(interval[n] + X[n, :] < interval[n]), color='c', alpha=ax.alpha)
         
-        else:            
-            ax.pcolormesh(time, interval, X, cmap='Greys')
+        else:
+            scaleFactor = np.max(np.abs(X))   
+            pclip = plotParams['pclip']
+            ax.pcolormesh(xvals, interval, X, vmin=-scaleFactor * pclip, vmax=scaleFactor * pclip, cmap=ax.customcmap)
                         
     else: # N == 1
         ax.yaxis.get_offset_text().set_x(-0.1)
         ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
         ax.set_ylabel(ylabel, color=ax.labelcolor)
                 
-        ax.plot(time, X[0, :], color=ax.linecolor, linewidth=ax.linewidth)
-        ax.fill_between(time, 0, X[0, :], where=(X[0, :] > 0), color='m', alpha=ax.alpha)
-        ax.fill_between(time, 0, X[0, :], where=(X[0, :] < 0), color='c', alpha=ax.alpha)
+        ax.plot(xvals, X[0, :], color=ax.linecolor, linewidth=ax.linewidth)
+        ax.fill_between(xvals, 0, X[0, :], where=(X[0, :] > 0), color='m', alpha=ax.alpha)
+        ax.fill_between(xvals, 0, X[0, :], where=(X[0, :] < 0), color='c', alpha=ax.alpha)
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
         
     ax.set_title(title, color=ax.titlecolor)
-    
     # get time units from plotParams
     tu = plotParams['tu']
     if tu != '':
@@ -392,28 +410,60 @@ def plotWiggles(ax, X, time, t0, tf, pltstart, interval, coordinates, title, fla
         ax.set_xlabel('Time', color=ax.labelcolor)
     
     # highlight regions of interest along the time axis
-    if flag == 'data' and (time[0] != t0 or time[-1] != tf):
+    if flag == 'data' and (xvals[0] != xmin or xvals[-1] != xmax):
         # For data plots, the full recording time is always plotted.
         # In this case, t0 and tf denote the beginning and end of a
         # time window. The time window of interest is highlighted
         # while the rest of the time axis is shaded.
-        ax.axvspan(time[0], t0, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
-        ax.axvspan(tf, time[-1], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
+        ax.axvspan(xvals[0], xmin, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
+        ax.axvspan(xmax, xvals[-1], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
     
         # set limits of time axis according to original recording time interval
-        ax.set_xlim([time[0], time[-1]])
+        ax.set_xlim([xvals[0], xvals[-1]])
         
     else:
         # For all other plots, only the time window of interest is plotted.
         # In this case, t0 and tf denote the beginning and end of the full
         # recording time interval. The time window of interest is highlighted
         # while the rest of the time axis is shaded.
-        ax.set_xlim([t0, tf])
+        ax.set_xlim([xmin, xmax])
         
-        ax.axvspan(t0, time[0], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
-        ax.axvspan(time[-1], tf, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
+        ax.axvspan(xmin, xvals[0], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
+        ax.axvspan(xvals[-1], xmax, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
         
     return ax
+
+
+def plotFreqVectors(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title, flag, plotParams):
+    ax.clear()
+    
+    ax.set_title(title, color=ax.titlecolor)
+    # get frequency units from plotParams
+    fu = plotParams['fu']
+    if fu != '':
+        ax.set_xlabel('Frequency (%s)' %(fu), color=ax.labelcolor)
+    else:
+        ax.set_xlabel('Frequency', color=ax.labelcolor)
+    
+    N = X.shape[0]
+    if N > 1:
+        # rescale all wiggle traces by largest displacement range
+        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
+        ax.set_ylabel(ylabel, color=ax.labelcolor)
+        
+        scaleFactor = np.max(np.abs(X))
+        if scaleFactor != 0:
+            X /= scaleFactor
+        
+        return ax.pcolormesh(xvals, interval, X, vmin=-1, vmax=1, cmap=ax.customcmap)
+                        
+    else: # N == 1
+        ax.yaxis.get_offset_text().set_x(-0.1)
+        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
+        ax.set_ylabel(ylabel, color=ax.labelcolor)
+                
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+        return ax.stem(xvals, X[0, :], linefmt=ax.linecolor, markerfmt='mo')
 
 
 #==============================================================================
@@ -997,28 +1047,40 @@ def next_map(ax, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams):
 #==============================================================================
 # Specific functions for plotting singular vectors...
                 
-def vector_title(flag, n):
+def vector_title(flag, n, cmplx_part=None):
     '''
     Creates a plot title for each left/right singular vector
     Returns a raw formatted string using LaTeX
     
     Parameters:
     flag: a string, either 'left' or 'right'
-    n: a nonnegative integer 
+    n: a nonnegative integer
+    dtype: data type (real or complex)
     '''
     
     if flag == 'left':
-        title = r'Left Singular Vector $\phi_{%d}(\mathbf{x}_r,t)$' %(n)
+        if cmplx_part == 'real':
+            title = r'$\Re\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
+        elif cmplx_part == 'imag':
+            title = r'$\Im\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
+        else:
+            title = r'Left Singular Vector $\phi_{%d}(\mathbf{x}_r,t)$' %(n)
+            
     
     elif flag == 'right':
-        title = r'Right Singular Vector $\psi_{%d}(\mathbf{x}_s,t_s)$' %(n)
+        if cmplx_part == 'real':
+            title = r'$\Re\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
+        elif cmplx_part == 'imag':
+            title = r'$\Im\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
+        else:
+            title = r'Right Singular Vector $\psi_{%d}(\mathbf{x}_s,t)$' %(n)
     
     return title
           
 
 
-def process_key_vectors(event, time, t0, tf, pltrstart, pltsstart, 
-                        rinterval, sinterval, receiverPoints, sourcePoints, plotParams):
+def process_key_vectors(event, xvals, xmin, xmax, pltrstart, pltsstart, 
+                        rinterval, sinterval, receiverPoints, sourcePoints, plotParams, dtype=None):
     '''
     Determines how to draw the next plot based on keyboard events
     
@@ -1039,32 +1101,58 @@ def process_key_vectors(event, time, t0, tf, pltrstart, pltsstart,
     ax2 = fig.axes[1]
     
     if event.key == 'left' or event.key == 'down':
-        previous_vector(ax1, time, t0, tf, pltrstart, rinterval, receiverPoints, 'left', plotParams)
-        previous_vector(ax2, time, t0, tf, pltsstart, sinterval, sourcePoints, 'right', plotParams)
+        if dtype == 'cmplx_left':
+            fig.suptitle('Left Singular Vector', color=ax1.titlecolor, fontsize=16)
+            previous_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
+            previous_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
+        elif dtype == 'cmplx_right':
+            fig.suptitle('Right Singular Vector', color=ax1.titlecolor, fontsize=16)
+            previous_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
+            previous_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
+        else:
+            previous_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', None, plotParams)
+            previous_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', None, plotParams)
     
     elif event.key == 'right' or event.key == 'up':
-        next_vector(ax1, time, t0, tf, pltrstart, rinterval, receiverPoints, 'left', plotParams)
-        next_vector(ax2, time, t0, tf, pltsstart, sinterval, sourcePoints, 'right', plotParams)
+        if dtype == 'cmplx_left':
+            fig.suptitle('Left Singular Vector', color=ax1.titlecolor, fontsize=16)
+            next_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
+            next_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
+        elif dtype == 'cmplx_right':
+            fig.suptitle('Right Singular Vector', color=ax1.titlecolor, fontsize=16)
+            next_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
+            next_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
+        else:
+            next_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', None, plotParams)
+            next_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', None, plotParams)
     
     fig.canvas.draw()
             
 
 
-def next_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plotParams):
+def next_vector(ax, xvals, xmin, xmax, pltstart, interval, coordinates, flag, cmplx_part, plotParams):
     volume = ax.volume
     ax.index = (ax.index + 1) % volume.shape[2]
-    title = vector_title(flag, ax.index + 1)
-    plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, interval, 
-                coordinates, title, flag, plotParams)
+    title = vector_title(flag, ax.index + 1, cmplx_part)
+    if cmplx_part is None:
+        plotWiggles(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+                    coordinates, title, flag, plotParams)
+    else:
+        plotFreqVectors(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+                    coordinates, title, flag, plotParams)
 
 
 
-def previous_vector(ax, time, t0, tf, pltstart, interval, coordinates, flag, plotParams):
+def previous_vector(ax, xvals, xmin, xmax, pltstart, interval, coordinates, flag, cmplx_part, plotParams):
     volume = ax.volume
     ax.index = (ax.index - 1) % volume.shape[2]  # wrap around using %
-    title = vector_title(flag, ax.index + 1)
-    plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, interval,
-                coordinates, title, flag, plotParams)
+    title = vector_title(flag, ax.index + 1, cmplx_part)
+    if cmplx_part is None:
+        plotWiggles(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+                    coordinates, title, flag, plotParams)
+    else:
+        plotFreqVectors(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+                    coordinates, title, flag, plotParams)
     
     
 

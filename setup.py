@@ -6,24 +6,16 @@ from setuptools import setup, find_packages
 import textwrap
 
 if sys.version_info <= (2,7):
-    sys.exit(textwrap.dedent(
-            '''
-            Sorry, Python <= 2.7 is not supported. Vezda requires Python >= 3.
-            (Try obtaining the Anaconda Python distribution at:
-                
-                https://www.anaconda.com/download/
-            
-            for example.)
-            '''))
-
-#with open('README.md', 'r') as fh:
-#     long_description = fh.read()
+    sys.exit('''
+             Sorry, Python <= 2.7 is not supported. Vezda requires Python >= 3.
+             (Try obtaining the Anaconda Python distribution at 
+                            https://www.anaconda.com/download/
+             for example.)
+             ''')
 
 setup(name = 'vezda',
-      version = '0.4.11',
-      description = 'A set of command-line tools for imaging with the linear sampling method',
-      #long_description = long_description,
-      #long_description_content_type = 'text/markdown',
+      version = '0.5.0',
+      description = 'A set of command-line tools for imaging with linear sampling methods',
       python_requires = '>=3',
       classifiers = [
               'Development Status :: 4 - Beta',
@@ -64,5 +56,5 @@ setup(name = 'vezda',
                       'vzwiggles = vezda.plotWiggles:cli',
                       'vzwindow = vezda.setWindow:cli'
                       ]
-              },      
+              },
       zip_safe = False)

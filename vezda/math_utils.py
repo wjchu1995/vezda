@@ -29,24 +29,14 @@ def nextPow2(i):
 
 def timeShift(data, tau, dt):
     '''
-    Apply a time shift 'tau' to the data via FFT
+    Apply a time shift 'tau' to the data in the frequency domain
     
     data: a 3D array with time on axis=1
     tau: a constant representing the time shift
     dt: the length of the time step (used to generate the discretized frequency bins)
     '''
-    
-    # Get the shape of the data array
-    # Nr : number of receivers
-    # Nt : number of time samples
-    # Ns : number of sources
-    Nr, Nt, Ns = data.shape
-    
-    # get the next power of 2 greater than or equal to 2 * Nt
-    # for efficient FFT
-    N = nextPow2(2 * Nt)
-    
-    # FFT the 'data' array into the frequency domain along the time axis=1
+    Nt = data.shape[1]
+    N = nextPow2(Nt)
     fftData = np.fft.rfft(data, n=N, axis=1)
     
     # Set up the phase vector e^(-i * omega * tau)
@@ -54,22 +44,6 @@ def timeShift(data, tau, dt):
     phase = np.exp(-iomega * tau)
     
     # Apply time shift in the frequency domain (element-wise array multiplication)
-    # and inverse FFT back into the time domain (keeping only the real part)
     shiftedData = np.fft.irfft(fftData * phase[None, :, None], axis=1)
     
-    # Return the shifted data array with the first Nt components along
-    # the time axis (axis=1) corresponding to the original length of the
-    # time axis.
     return shiftedData[:, :Nt, :]
-
-def timeReverse(data):
-    '''
-    Time reverse a discrete signal
-    
-    data: input array with time signals along axis=0
-    '''
-    
-    reversedData = np.flipud(data)
-    reversedData = np.roll(reversedData, shift=1, axis=0)
-    
-    return reversedData

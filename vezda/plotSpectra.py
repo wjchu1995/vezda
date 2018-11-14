@@ -29,9 +29,9 @@ def cli():
                         help='''Plot the mean power spectrum of the data. Default is to plot the
                         mean amplitude spectrum of the Fourier transform.''')
     parser.add_argument('--fmin', type=float,
-                        help='Specify the minimum frequency of the power spectrum plot. Default is set to 0.')
+                        help='Specify the minimum frequency of the amplitude/power spectrum plot. Default is set to 0.')
     parser.add_argument('--fmax', type=float,
-                        help='''Specify the maximum frequency of the power spectrum plot. Default is set to the
+                        help='''Specify the maximum frequency of the amplitude/power spectrum plot. Default is set to the
                         maximum frequency bin based on the length of the time signal.''')
     parser.add_argument('--fu', type=str,
                         help='Specify the frequency units (e.g., Hz)')
@@ -48,17 +48,13 @@ def cli():
     # Load the receiver coordinates and recording times from the data directory
     datadir = np.load('datadir.npz')
     recordingTimes = np.load(str(datadir['recordingTimes']))
-    receiverPoints = np.load(str(datadir['receivers']))
-    if 'sources' in datadir:
-        sourcePoints = np.load(str(datadir['sources']))
-    else:
-        sourcePoints = None
+        
     if Path('noisyData.npy').exists():
         userResponded = False
         print(textwrap.dedent(
               '''
               Detected that band-limited noise has been added to the data array.
-              Would you like to plot the power spectrum of the noisy data? ([y]/n)
+              Would you like to plot the amplitude/power spectrum of the noisy data? ([y]/n)
               
               Enter 'q/quit' exit the program.
               '''))
@@ -107,23 +103,17 @@ def cli():
         
         # Receiver window parameters
         rstart = 0
-        rstop = receiverPoints.shape[0]
+        rstop = recordedData.shape[0]
         rstep = 1
         
         # Source window parameters
         sstart = 0
         sstop = recordedData.shape[2]
         sstep = 1
-    
-    # Slice the receiverPoints array according to the receiver window parametes
-    rinterval = np.arange(rstart, rstop, rstep)
-    receiverPoints = receiverPoints[rinterval, :]
-    
+        
+    # Slice the data array according to the receiver/source window parameters
+    rinterval = np.arange(rstart, rstop, rstep)    
     sinterval = np.arange(sstart, sstop, sstep)
-    if sourcePoints is not None:
-        # Slice the sourcePoints array according to the source window parametes
-        sourcePoints = sourcePoints[sinterval, :]
-
     recordedData = recordedData[rinterval, :, :]
     recordedData = recordedData[:, :, sinterval]
         
@@ -312,6 +302,6 @@ def cli():
     ax.locator_params(axis='y', nticks=6)
     ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.tight_layout()
-    fig.savefig('FourierSpectrum.' + args.format, format=args.format, bbox_inches='tight')
+    fig.savefig(plotLabel + 'Spectrum.' + args.format, format=args.format, bbox_inches='tight', facecolor=fig.get_facecolor())
     plt.show()
     

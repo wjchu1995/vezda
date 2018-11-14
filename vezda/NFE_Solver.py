@@ -18,12 +18,14 @@ import sys
 import textwrap
 import numpy as np
 from vezda.Tikhonov import Tikhonov
-from vezda.sampling_utils import samplingIsCurrent, sampleSpaceTime
-from vezda.math_utils import timeShift
+from vezda.sampling_utils import samplingIsCurrent, sampleSpace
+from vezda.math_utils import nextPow2, timeShift
+from vezda.plot_utils import default_params
 from scipy.linalg import norm
 from tqdm import trange
 from time import sleep
 from pathlib import Path
+import pickle
 
 # pulseFun module contains information about the time-dependent
 # pulse function used to generate the interrogating wave. This
@@ -32,21 +34,17 @@ from pathlib import Path
 sys.path.append(os.getcwd())
 import pulseFun
 
-def solver(medium, s, U, V, alpha):
+def solver(medium, s, Uh, V, alpha, domain):
     
     #==============================================================================
     # Load the receiver coordinates and recording times from the data directory
     datadir = np.load('datadir.npz')
     recordingTimes = np.load(str(datadir['recordingTimes']))
     receiverPoints = np.load(str(datadir['receivers']))
-#    if 'sources' in datadir:
-#        sourcePoints = np.load(str(datadir['sources']))
-#    else:
-#        sourcePoints = None
     
     # Compute length of time step.
     # This parameter is used for FFT shifting and time windowing
-    dt = (recordingTimes[-1] - recordingTimes[0]) / (len(recordingTimes) - 1)
+    dt = recordingTimes[1] - recordingTimes[0]
     
     # Load the windowing parameters for the receiver and time axes of
     # the 3D data array
@@ -57,9 +55,9 @@ def solver(medium, s, U, V, alpha):
         tstart = windowDict['tstart']
         tstop = windowDict['tstop']
         
-        # Time window parameters (integers corresponding to indices in an array)
-        twStart = int(round(tstart / dt))
-        twStop = int(round(tstop / dt))
+        # Convert time window parameters to corresponding array indices
+        tstart = int(round(tstart / dt))
+        tstop = int(round(tstop / dt))
         tstep = windowDict['tstep']
         
         # Receiver window parameters
@@ -67,22 +65,13 @@ def solver(medium, s, U, V, alpha):
         rstop = windowDict['rstop']
         rstep = windowDict['rstep']
         
-#        # Source window parameters
-#        sstart = windowDict['sstart']
-#        sstop = windowDict['sstop']
-#        sstep = windowDict['sstep']
-        
     else:
         # Set default window parameters if user did
         # not specify window parameters.
         
-        # Time window parameters (units of time)
-        tstart = recordingTimes[0]
-        tstop = recordingTimes[-1]
-        
         # Time window parameters (integers corresponding to indices in an array)
-        twStart = 0
-        twStop = len(recordingTimes)
+        tstart = 0
+        tstop = len(recordingTimes)
         tstep = 1
         
         # Receiver window parameters
@@ -90,33 +79,17 @@ def solver(medium, s, U, V, alpha):
         rstop = receiverPoints.shape[0]
         rstep = 1
         
-#        # Source window parameters
-#        sstart = 0
-#        if sourcePoints is None:
-#            recordedData = np.load(str(datadir['recordedData']))
-#            sstop = recordedData.shape[2]
-#        else:
-#            sstop = sourcePoints.shape[0]
-#        sstep = 1
-        
     # Slice the recording times according to the time window parameters
     # to create a time window array
-    tinterval = np.arange(twStart, twStop, tstep)
+    tinterval = np.arange(tstart, tstop, tstep)
     recordingTimes = recordingTimes[tinterval]
     
     # Slice the receiverPoints array according to the receiver window parametes
     rinterval = np.arange(rstart, rstop, rstep)
     receiverPoints = receiverPoints[rinterval, :]
-
-#    # Slice the sourcePoints array according to the source window parametes
-#    sinterval = np.arange(sstart, sstop, sstep)
-#    if sourcePoints is not None:
-#        # Slice the sourcePoints array according to the source window parametes
-#        sourcePoints = sourcePoints[sinterval, :]  
     
     Nr = receiverPoints.shape[0]
     Nt = len(recordingTimes)    # number of samples in time window
-    T = tstop - tstart      # length of time window (dimensional)
     
     # Get information about the pulse function used to 
     # generate the interrogating wave (These parameters are
@@ -125,6 +98,12 @@ def solver(medium, s, U, V, alpha):
     velocity = pulseFun.velocity    # only used if medium == constant
     peakFreq = pulseFun.peakFreq    # peak frequency
     peakTime = pulseFun.peakTime    # time at which the pulse amplitude is maximum
+    
+    # Used for getting time and frequency units
+    if Path('plotParams.pkl').exists():
+        plotParams = pickle.load(open('plotParams.pkl', 'rb'))
+    else:
+        plotParams = default_params()
     
     # Get machine precision
     eps = np.finfo(float).eps     # about 2e-16 (used in division
@@ -149,7 +128,7 @@ def solver(medium, s, U, V, alpha):
                 '''))
     
     if 'z' not in samplingGrid:
-        # Apply total-energy linear sampling method to three-dimensional space-time
+        # Apply linear sampling method to three-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
         tau = samplingGrid['tau']
@@ -160,8 +139,6 @@ def solver(medium, s, U, V, alpha):
         Ny = len(y)
         X, Y = np.meshgrid(x, y, indexing='ij')
         Ntau = len(tau)
-        if Ntau > 1:
-            deltaTau = tau[1] - tau[0] # step size for sampling in time
         
         # Initialize the Histogram for storing images at each sampling point in time.
         # Initialize the Image (time-integrated Histogram with respect to L2 norm)
@@ -193,8 +170,17 @@ def solver(medium, s, U, V, alpha):
                     
                 else:
                     print('Recomputing test functions...')
-                    TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
-                                                              velocity, tau, x, y, z, pulse)
+                    if tau[0] != 0:
+                        tu = plotParams['tu']
+                        if tu != '':
+                            print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        else:
+                            print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                              x, y, z, pulse)
+                    else:
+                        TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                              x, y, z, pulse)
                     
                     np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
@@ -202,27 +188,77 @@ def solver(medium, s, U, V, alpha):
                 
             else:                
                 print('\nComputing free-space test functions for the current space-time sampling grid...')
-                TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
-                                                          velocity, tau, x, y, z, pulse)
+                if tau[0] != 0:
+                    tu = plotParams['tu']
+                    if tu != '':
+                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    else:
+                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                          x, y, z, pulse)
+                else:
+                    TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                          x, y, z, pulse)
                     
                 np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, tau=tau, samplingPoints=samplingPoints)
+            #==============================================================================
+            if domain == 'freq':
+                # Transform test functions into the frequency domain and bandpass for efficient solution
+                # to near-field equation
             
-            print('Localizing the source function...')
-            if Ntau == 1:
+                N = nextPow2(2 * Nt)
+                TFarray = np.fft.rfft(TFarray, n=N, axis=1)
+        
+                if plotParams['fmax'] is None:
+                    freqs = np.fft.rfftfreq(N, tstep * dt)
+                    plotParams['fmax'] = np.max(freqs)
+                    pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+                
+                # Apply the frequency window
+                fmin = plotParams['fmin']
+                fmax = plotParams['fmax']
+                fu = plotParams['fu']   # frequency units (e.g., Hz)
+                
+                if fu != '':
+                    print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                else:
+                    print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+            
+                df = 1.0 / (N * tstep * dt)
+                startIndex = int(round(fmin / df))
+                stopIndex = int(round(fmax / df))
+                    
+                finterval = np.arange(startIndex, stopIndex, 1)
+                TFarray = TFarray[:, finterval, :]
+                    
+            else:
+                # Pad test functions in the time domain to length 2*Nt-1 (length of circular convolution)
+                # to solve near-field equation
+                
+                N = Nt - 1
+                npad = ((0, 0), (N, 0), (0, 0))
+                TFarray = np.pad(TFarray, pad_width=npad, mode='constant', constant_values=0)
+                
+            N = TFarray.shape[1]
+                
+            #==============================================================================
+            # Solve the near-field equation for each sampling point
+            print('Localizing the source...')
+            if Ntau == 1 or domain == 'freq':
                 # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                 # 'tf' is a test function
                 # 'alpha' is the regularization parameter
                 # 'phi_alpha' is the regularized solution given 'alpha'
-                TF = TFarray[:, :, :, 0]
-                l = 0 # counter for spatial sampling points
+                
+                k = 0 # counter for spatial sampling points
                 for ix in trange(Nx, desc='Solving system'):
                     for iy in range(Ny):
-                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                        tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                         Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
-                        l += 1
+                        k += 1
                 
                 Imin = np.min(Image)
                 Imax = np.max(Image)
@@ -230,30 +266,32 @@ def solver(medium, s, U, V, alpha):
                 Histogram[:, :, 0] = Image
                 
             else:
-                # Store spatial reconstruction of the source function for each
+                # Store spatial reconstruction of the source for each
                 # sampling point in time in Histogram
                 # Compute time-integrated Image from Histogram using L2 norm
                 # Discretize L2 integration using trapezoidal rule with 
                 # uniform step size deltaTau
                 firstIndicator = np.zeros(X.shape)
                 lastIndicator = np.zeros(X.shape)
-                firstTF = TFarray[:, :, :, 0]   # test function array for first time sample
-                lastTF = TFarray[:, :, :, -1]   # test function array for last time sample
+                
+                tau0 = tau[0]
+                lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
                 
                 # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                 # 'tf' is a test function
                 # 'alpha' is the regularization parameter
                 # 'phi_alpha' is the regularized solution given 'alpha'
-                l = 0 # counter for spatial sampling points
+                
+                k = 0 # counter for spatial sampling points
                 for ix in range(Nx):
                     for iy in range(Ny):
-                        tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                        tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                        phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                        phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                        tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                        tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                        phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                        phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                         firstIndicator[ix, iy] = 1.0 / (norm(phi_alpha1) + eps)
                         lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
-                        l += 1
+                        k += 1
                         
                 Imin1 = np.min(firstIndicator)
                 Imax1 = np.max(firstIndicator)
@@ -269,13 +307,14 @@ def solver(medium, s, U, V, alpha):
                 
                 for it in trange(1, Ntau - 1, desc='Source-time integration'):
                     indicator = np.zeros(X.shape)
-                    l = 0 # counter for spatial sampling points
+                    TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                    k = 0 # counter for spatial sampling points
                     for ix in trange(Nx, desc='Solving system', leave=False):
                         for iy in range(Ny):
-                            tf = np.reshape(TFarray[:, :, l, it], (Nt * Nr, 1))
-                            phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                            tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                            phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                             indicator[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
-                            l += 1
+                            k += 1
                             sleep(0.001)
                 
                     Imin = np.min(indicator)
@@ -284,22 +323,56 @@ def solver(medium, s, U, V, alpha):
                     Histogram[:, :, it] = indicator
                     Image += indicator**2
                     
-                Image *= deltaTau / T
-                Image = np.sqrt(Image)
+                Image = np.sqrt(Image / Ntau)
                     
         elif medium == 'variable':
             if 'testFuncs' in datadir:
-                # TFarray computed outside of Vezda for variable media will only 
-                # have 3 axes. A fourth axis will be added to accomodate for time shifts
-                # corresponding to different sampling points in time
-                tempTFarray = np.load(str(datadir['testFuncs']))
+                # Load the user-provided test functions
+                TFarray = np.load(str(datadir['testFuncs']))
             
-                # Apply the receiver window, if any
-                tempTFarray = tempTFarray[rinterval, :, :]
+                # Apply the receiver/time windows, if any
+                TFarray = TFarray[rinterval, :, :]
+                TFarray = TFarray[:, tinterval, :]
+                
+                #==============================================================================
+                if domain == 'freq':
+                    # Transform test functions into the frequency domain and bandpass for efficient solution
+                    # to near-field equation
             
-                # Add new axis to TFarray to accomodate time shifts
-                TFarray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
-                TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
+                    N = nextPow2(2 * Nt)
+                    TFarray = np.fft.rfft(TFarray, n=N, axis=1)
+        
+                    if plotParams['fmax'] is None:
+                        freqs = np.fft.rfftfreq(N, tstep * dt)
+                        plotParams['fmax'] = np.max(freqs)
+                        pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+                
+                    # Apply the frequency window
+                    fmin = plotParams['fmin']
+                    fmax = plotParams['fmax']
+                    fu = plotParams['fu']   # frequency units (e.g., Hz)
+                
+                    if fu != '':
+                        print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                    else:
+                        print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+            
+                    df = 1.0 / (N * tstep * dt)
+                    startIndex = int(round(fmin / df))
+                    stopIndex = int(round(fmax / df))
+                    
+                    finterval = np.arange(startIndex, stopIndex, 1)
+                    TFarray = TFarray[:, finterval, :]
+                        
+                else:
+                    # Pad test functions in the time domain to length 2*Nt-1 (length of circular convolution)
+                    # to solve near-field equation
+                
+                    N = Nt - 1
+                    npad = ((0, 0), (N, 0), (0, 0))
+                    TFarray = np.pad(TFarray, pad_width=npad, mode='constant', constant_values=0)
+                
+                N = TFarray.shape[1]
                 
                 # Load the sampling points
                 samplingPoints = np.load(str(datadir['samplingPoints']))
@@ -331,25 +404,20 @@ def solver(medium, s, U, V, alpha):
                 order = input('Order: ')
                 if order == '' or order == 'xy':
                     print('Proceeding with order \'xy\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iy in range(Ny):
-                                tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                 Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
-                                l += 1
+                                k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
@@ -362,21 +430,20 @@ def solver(medium, s, U, V, alpha):
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
+                        
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
                     
-                        l = 0 # counter for spatial sampling points
+                        k = 0 # counter for spatial sampling points
                         for ix in range(Nx):
                             for iy in range(Ny):
-                                tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                 firstIndicator[ix, iy] = 1.0 / (norm(phi_alpha1) + eps)
                                 lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
-                                l += 1
+                                k += 1
                             
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
@@ -391,18 +458,15 @@ def solver(medium, s, U, V, alpha):
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                     
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for ix in trange(Nx, desc='Solving system', leave=False):
                                 for iy in range(Ny):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     indicator[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                                     sleep(0.001)
                                 
                             Imin = np.min(indicator)
@@ -411,32 +475,26 @@ def solver(medium, s, U, V, alpha):
                             Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'yx':
                     print('Proceeding with order \'yx\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for ix in range(Nx):
-                                tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                phi_alpha[:, l, 0] = Tikhonov(U, s, V, tf, alpha)
-                                Image[ix, iy] = 1.0 / (norm(phi_alpha[:, l, 0]) + eps)
-                                l += 1
+                                tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
+                                k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
@@ -444,62 +502,57 @@ def solver(medium, s, U, V, alpha):
                         Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
-                        # discretize using trapezoidal rule with uniform deltaTau
+                        # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for iy in range(Ny):
                             for ix in range(Nx):
-                                tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                 firstIndicator[ix, iy] = 1.0 / (norm(phi_alpha1) + eps)
                                 lastIndicator[ix, iy] = 1.0 / (norm(phi_alpha2) + eps)
-                                l += 1
+                                k += 1
                             
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
-                        firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)     # normalization
-                        Histogram[:, :, 0] = np.sqrt(firstIndicator)
-                        
+                        firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
-                        lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)     # normalization
-                        Histogram[:, :, -1] = np.sqrt(lastIndicator)
+                        lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for iy in trange(Ny, desc='Solving system', leave=False):
                                 for ix in range(Nx):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     indicator[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                                     sleep(0.001)
-                                    
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
-                            indicator = (indicator - Imin) / (Imax - Imin + eps)   # normalization
+                            indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
                             Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
@@ -515,17 +568,13 @@ def solver(medium, s, U, V, alpha):
                          Enter 'yx' if for each y, loop over x.
                          Enter 'q/quit' to abort the calculation.
                          '''))
-                        
-            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
-                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                     x=x, y=y, tau=tau, samplingPoints=samplingPoints)
             
         np.savez('imageNFE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y, tau=tau)
     
     #==============================================================================    
-    else:
-        # Apply total-energy linear sampling method to four-dimensional space-time
+    else:                
+        # Apply linear sampling method to four-dimensional space-time
         x = samplingGrid['x']
         y = samplingGrid['y']
         z = samplingGrid['z']
@@ -536,7 +585,6 @@ def solver(medium, s, U, V, alpha):
         Ny = len(y)
         Nz = len(z)
         Ntau = len(tau)
-        deltaTau = tau[1] - tau[0] # step size for sampling in time
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
         # Initialize the Histogram for storing images at each sampling point in time.
@@ -570,8 +618,17 @@ def solver(medium, s, U, V, alpha):
                     
                 else:
                     print('Recomputing test functions...')
-                    TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
-                                                              velocity, tau, x, y, z, pulse)
+                    if tau[0] != 0:
+                        tu = plotParams['tu']
+                        if tu != '':
+                            print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        else:
+                            print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                              x, y, z, pulse)
+                    else:
+                        TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                              x, y, z, pulse)
                     
                     np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
@@ -579,108 +636,194 @@ def solver(medium, s, U, V, alpha):
                 
             else:                
                 print('\nComputing free-space test functions for the current space-time sampling grid...')
-                TFarray, samplingPoints = sampleSpaceTime(receiverPoints, recordingTimes,
-                                                          velocity, tau, x, y, z, pulse)
+                if tau[0] != 0:
+                    tu = plotParams['tu']
+                    if tu != '':
+                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    else:
+                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                          x, y, z, pulse)
+                else:
+                    TFarray, samplingPoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                          x, y, z, pulse)
                     
                 np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
                          peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                          x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
+                
+            #==============================================================================
+            if domain == 'freq':
+                # Transform test functions into the frequency domain and bandpass for efficient solution
+                # to near-field equation
             
-            print('Localizing the source function...')
-            if Ntau == 1:
+                N = nextPow2(2 * Nt)
+                TFarray = np.fft.rfft(TFarray, n=N, axis=1)
+        
+                if plotParams['fmax'] is None:
+                    freqs = np.fft.rfftfreq(N, tstep * dt)
+                    plotParams['fmax'] = np.max(freqs)
+                    pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
+                
+                # Apply the frequency window
+                fmin = plotParams['fmin']
+                fmax = plotParams['fmax']
+                fu = plotParams['fu']   # frequency units (e.g., Hz)
+                
+                if fu != '':
+                    print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                else:
+                    print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+            
+                df = 1.0 / (N * tstep * dt)
+                startIndex = int(round(fmin / df))
+                stopIndex = int(round(fmax / df))
+                    
+                finterval = np.arange(startIndex, stopIndex, 1)
+                TFarray = TFarray[:, finterval, :]
+                    
+            else:
+                # Pad test functions in the time domain to length 2*Nt-1 (length of circular convolution)
+                # to solve near-field equation
+                
+                N = Nt - 1
+                npad = ((0, 0), (N, 0), (0, 0))
+                TFarray = np.pad(TFarray, pad_width=npad, mode='constant', constant_values=0)
+                
+            N = TFarray.shape[1]
+            #==============================================================================
+            # Solve the near-field equation for each sampling point
+            print('Localizing the source...')
+            if Ntau == 1 or domain == 'freq':
                 # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                 # 'tf' is a test function
                 # 'alpha' is the regularization parameter
                 # 'phi_alpha' is the regularized solution given 'alpha'
-                print()
-                TF = TFarray[:, :, :, 0]
-                l = 0 # counter for spatial sampling points
+                
+                k = 0 # counter for spatial sampling points
                 for ix in trange(Nx, desc='Solving system'):
                     for iy in range(Ny):
                         for iz in range(Nz):
-                            tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                            phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                            tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                            phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                             Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                            l += 1
+                            k += 1
                 
                 Imin = np.min(Image)
                 Imax = np.max(Image)
                 Image = (Image - Imin) / (Imax - Imin + eps)
-                Histogram[:, :, :, 0] = Image
+                Histogram[:, :, 0] = Image
                 
             else:
-                # Store spatial reconstruction of the source function for each
+                # Store spatial reconstruction of the source for each
                 # sampling point in time in Histogram
                 # Compute time-integrated Image from Histogram using L2 norm
                 # Discretize L2 integration using trapezoidal rule with 
                 # uniform step size deltaTau
                 firstIndicator = np.zeros(X.shape)
                 lastIndicator = np.zeros(X.shape)
-                firstTF = TFarray[:, :, :, 0]   # test function array for first time sample
-                lastTF = TFarray[:, :, :, -1]   # test function array for last time sample
+                
+                tau0 = tau[0]
+                lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
                 
                 # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                 # 'tf' is a test function
                 # 'alpha' is the regularization parameter
                 # 'phi_alpha' is the regularized solution given 'alpha'
-                l = 0 # counter for spatial sampling points
+                
+                k = 0 # counter for spatial sampling points
                 for ix in range(Nx):
                     for iy in range(Ny):
                         for iz in range(Nz):
-                            tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                            tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                            phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                            phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                            tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                            tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                            phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                            phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                             firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                             lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                            l += 1
-            
+                            k += 1
+                        
                 Imin1 = np.min(firstIndicator)
                 Imax1 = np.max(firstIndicator)
                 firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                Histogram[:, :, :, 0] = firstIndicator
+                Histogram[:, :, 0] = firstIndicator
                 
                 Imin2 = np.min(lastIndicator)
                 Imax2 = np.max(lastIndicator)
                 lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                Histogram[:, :, :, -1] = lastIndicator
+                Histogram[:, :, -1] = lastIndicator
                 
                 Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
                 
                 for it in trange(1, Ntau - 1, desc='Source-time integration'):
                     indicator = np.zeros(X.shape)
-                    l = 0 # counter for spatial sampling points
+                    TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                    k = 0 # counter for spatial sampling points
                     for ix in trange(Nx, desc='Solving system', leave=False):
                         for iy in range(Ny):
                             for iz in range(Nz):
-                                tf = np.reshape(TFarray[:, :, l, it], (Nt * Nr, 1))
-                                phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                 indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                l += 1
+                                k += 1
                                 sleep(0.001)
-                                
+                
                     Imin = np.min(indicator)
                     Imax = np.max(indicator)
                     indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
                     Histogram[:, :, it] = indicator
                     Image += indicator**2
                     
-                Image *= deltaTau / T
-                Image = np.sqrt(Image)
+                Image = np.sqrt(Image / Ntau)
                         
         elif medium == 'variable':
             if 'testFuncs' in datadir:
-                # TFarray computed outside of Vezda for variable media will only 
-                # have 3 axes. A fourth axis will be added to accomodate for time shifts
-                # corresponding to different sampling points in time
-                tempTFarray = np.load(str(datadir['testFuncs']))
+                # Load the user-provided test functions
+                TFarray = np.load(str(datadir['testFuncs']))
+            
+                # Apply the receiver/time windows, if any
+                TFarray = TFarray[rinterval, :, :]
+                TFarray = TFarray[:, tinterval, :]
                 
-                # Apply the receiver window, if any
-                tempTFarray = tempTFarray[rinterval, :, :]
+                #==============================================================================
+                if domain == 'freq':
+                    # Transform test functions into the frequency domain and bandpass for efficient solution
+                    # to near-field equation
+            
+                    N = nextPow2(2 * Nt)
+                    TFarray = np.fft.rfft(TFarray, n=N, axis=1)
+        
+                    if plotParams['fmax'] is None:
+                        freqs = np.fft.rfftfreq(N, tstep * dt)
+                        plotParams['fmax'] = np.max(freqs)
+                        pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
                 
-                # Add new axis to TFarray to accomodate time shifts
-                TFarray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
-                TFarray[:, :, :, 0] = tempTFarray[:, tinterval, :]
+                    # Apply the frequency window
+                    fmin = plotParams['fmin']
+                    fmax = plotParams['fmax']
+                    fu = plotParams['fu']   # frequency units (e.g., Hz)
+                
+                    if fu != '':
+                        print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                    else:
+                        print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+            
+                    df = 1.0 / (N * tstep * dt)
+                    startIndex = int(round(fmin / df))
+                    stopIndex = int(round(fmax / df))
+                    
+                    finterval = np.arange(startIndex, stopIndex, 1)
+                    TFarray = TFarray[:, finterval, :]
+                        
+                else:
+                    # Pad test functions in the time domain to length 2*Nt-1 (length of circular convolution)
+                    # to solve near-field equation
+                
+                    N = Nt - 1
+                    npad = ((0, 0), (N, 0), (0, 0))
+                    TFarray = np.pad(TFarray, pad_width=npad, mode='constant', constant_values=0)
+                
+                N = TFarray.shape[1]
                 
                 # Load the sampling points
                 samplingPoints = np.load(str(datadir['samplingPoints']))
@@ -690,7 +833,10 @@ def solver(medium, s, U, V, alpha):
                         '''
                         FileNotFoundError: Attempted to load file containing test
                         functions, but no such file exists. If a file exists containing
-                        the test functions, run 'vzdata --path=<path/to/data/>' command 
+                        the test functions, run:
+                            
+                            'vzdata --path=<path/to/data/>'
+                        
                         and specify the file containing the test functions when prompted.
                         Otherwise, specify 'no' when asked if a file containing the test
                         functions exists.
@@ -713,541 +859,481 @@ def solver(medium, s, U, V, alpha):
                 order = input('Order: ')
                 if order == '' or order == 'xyz':
                     print('Proceeding with order \'xyz\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iy in range(Ny):
                                 for iz in range(Nz):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for ix in range(Nx):
                             for iy in range(Ny):
                                 for iz in range(Nz):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = lastIndicator
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for ix in trange(Nx, desc='Solving system', leave=False):
                                 for iy in range(Ny):
                                     for iz in range(Nz):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'xzy':
                     print('Proceeding with order \'xzy\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for ix in trange(Nx, desc='Solving system'):
                             for iz in range(Nz):
                                 for iy in range(Ny):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for ix in range(Nx):
                             for iz in range(Nz):
                                 for iy in range(Ny):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = np.sqrt(lastIndicator)
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for ix in trange(Nx, desc='Solving system', leave=False):
                                 for iz in range(Nz):
                                     for iy in range(Ny):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'yxz':
                     print('Proceeding with order \'yxz\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for ix in range(Nx):
                                 for iz in range(Nz):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for iy in range(Ny):
                             for ix in range(Nx):
                                 for iz in range(Nz):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = lastIndicator
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for iy in trange(Ny, desc='Solving system', leave=False):
                                 for ix in range(Nx):
                                     for iz in range(Nz):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'yzx':
                     print('Proceeding with order \'yzx\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for iy in trange(Ny, desc='Solving system'):
                             for iz in range(Nz):
                                 for ix in range(Nx):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for iy in range(Ny):
                             for iz in range(Nz):
                                 for ix in range(Nx):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = lastIndicator
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for iy in trange(Ny, desc='Solving system', leave=False):
                                 for iz in range(Nz):
                                     for ix in range(Nx):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'zxy':
                     print('Proceeding with order \'zxy\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for iz in trange(Nz, desc='Solving system'):
                             for ix in range(Nx):
                                 for iy in range(Ny):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for iz in range(Nz):
                             for ix in range(Nx):
                                 for iy in range(Ny):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = lastIndicator
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for iz in trange(Nz, desc='Solving system', leave=False):
                                 for ix in range(Nx):
                                     for iy in range(Ny):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
                 elif order == 'zyx':
                     print('Proceeding with order \'zyx\'...')
-                    print('Localizing the source function...')
-                    if Ntau == 1:
+                    print('Localizing the source...')
+                    if Ntau == 1 or domain == 'freq':
                         # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                         # 'tf' is a test function
                         # 'alpha' is the regularization parameter
                         # 'phi_alpha' is the regularized solution given 'alpha'
-                        if tau[0] != 0:
-                            TF = timeShift(tempTFarray, tau[0], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, 0] = TF
-                        else:
-                            TF = TFarray[:, :, :, 0]
-                        l = 0 # counter for spatial sampling points
+                        
+                        k = 0 # counter for spatial sampling points
                         for iz in trange(Nz, desc='Solving system'):
                             for iy in range(Ny):
                                 for ix in range(Nx):
-                                    tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                    tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                     Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                    l += 1
+                                    k += 1
                 
                         Imin = np.min(Image)
                         Imax = np.max(Image)
                         Image = (Image - Imin) / (Imax - Imin + eps)
-                        Histogram[:, :, :, 0] = Image
+                        Histogram[:, :, 0] = Image
                         userResponded = True
                         break
-                    
+                        
                     else:
                         # discretize using trapezoidal rule with uniform step size deltaTau
                         firstIndicator = np.zeros(X.shape)
                         lastIndicator = np.zeros(X.shape)
-                        firstTF = TFarray[:, :, :, 0]
-                        lastTF = timeShift(tempTFarray, tau[-1], dt)
-                        lastTF = lastTF[:, tinterval, :]
-                        TFarray[:, :, :, -1] = lastTF
                         
-                        l = 0 # counter for spatial sampling points
+                        tau0 = tau[0]
+                        lastTF = timeShift(TFarray, tau[-1] - tau0, tstep * dt) # test function array for last time sample
+                    
+                        k = 0 # counter for spatial sampling points
                         for iz in range(Nz):
                             for iy in range(Ny):
                                 for ix in range(Nx):
-                                    tf1 = np.reshape(firstTF[:, :, l], (Nt * Nr, 1))
-                                    tf2 = np.reshape(lastTF[:, :, l], (Nt * Nr, 1))
-                                    phi_alpha1 = Tikhonov(U, s, V, tf1, alpha)
-                                    phi_alpha2 = Tikhonov(U, s, V, tf2, alpha)
+                                    tf1 = np.reshape(TFarray[:, :, k], (N * Nr, 1))
+                                    tf2 = np.reshape(lastTF[:, :, k], (N * Nr, 1))
+                                    phi_alpha1 = Tikhonov(Uh, s, V, tf1, alpha)
+                                    phi_alpha2 = Tikhonov(Uh, s, V, tf2, alpha)
                                     firstIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha1) + eps)
                                     lastIndicator[ix, iy, iz] = 1.0 / (norm(phi_alpha2) + eps)
-                                    l += 1
-                                    
+                                    k += 1
+                            
                         Imin1 = np.min(firstIndicator)
                         Imax1 = np.max(firstIndicator)
                         firstIndicator = (firstIndicator - Imin1) / (Imax1 - Imin1 + eps)  # normalization
-                        Histogram[:, :, :, 0] = firstIndicator
-                        
+                        Histogram[:, :, 0] = firstIndicator
+                    
                         Imin2 = np.min(lastIndicator)
                         Imax2 = np.max(lastIndicator)
                         lastIndicator = (lastIndicator - Imin2) / (Imax2 - Imin2 + eps)  # normalization
-                        Histogram[:, :, :, -1] = lastIndicator
+                        Histogram[:, :, -1] = lastIndicator
                         
                         Image += 0.5 * (firstIndicator**2 + lastIndicator**2)
-                        
+                    
                         for it in trange(1, Ntau - 1, desc='Source-time integration'):
-                            TF = timeShift(tempTFarray, tau[it], dt)
-                            TF = TF[:, tinterval, :]
-                            TFarray[:, :, :, it] = TF
                             indicator = np.zeros(X.shape)
-                            
-                            l = 0 # counter for spatial sampling points
+                            TF = timeShift(TFarray, tau[it] - tau0, tstep * dt)
+                            k = 0 # counter for spatial sampling points
                             for iz in trange(Nz, desc='Solving system', leave=False):
                                 for iy in range(Ny):
                                     for ix in range(Nx):
-                                        tf = np.reshape(TF[:, :, l], (Nt * Nr, 1))
-                                        phi_alpha = Tikhonov(U, s, V, tf, alpha)
+                                        tf = np.reshape(TF[:, :, k], (N * Nr, 1))
+                                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
                                         indicator[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
-                                        l += 1
+                                        k += 1
                                         sleep(0.001)
-                                        
+                                
                             Imin = np.min(indicator)
                             Imax = np.max(indicator)
                             indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                            Histogram[:, :, :, it] = indicator
+                            Histogram[:, :, it] = indicator
                             Image += indicator**2
                             
-                        Image *= deltaTau / T
-                        Image = np.sqrt(Image)
+                        Image = np.sqrt(Image / Ntau)
                         userResponded = True
                         break
                 
@@ -1266,10 +1352,6 @@ def solver(medium, s, U, V, alpha):
                          Enter 'zyx' if for each z, for each y, loop over x
                          Enter 'q/quit' to abort the calculation.
                          '''))
-                        
-            np.savez('VZTestFuncs.npz', TFarray=TFarray, time=recordingTimes, receivers=receiverPoints,
-                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                     x=x, y=y, z=z, tau=tau, samplingPoints=samplingPoints)
         
         np.savez('imageNFE.npz', Image=Image, Histogram=Histogram,
                  alpha=alpha, X=X, Y=Y, Z=Z, tau=tau)

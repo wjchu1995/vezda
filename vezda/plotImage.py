@@ -426,20 +426,23 @@ def cli():
     #==============================================================================
     
     pltformat = plotParams['pltformat']    
-    fig1.savefig('image' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
+    fig1.savefig('image' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
+                 facecolor=fig1.get_facecolor(), transparent=True)
     
     if flag == 'NFE' and args.spacetime:
         remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
         if Z is None:
             try:
-                fig3.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
+                fig3.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
+                             facecolor=fig3.get_facecolor(), transparent=True)
                 fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
                                                                                     alpha, X, Y, Z, Ntau, tau))
             except NameError:
                 print('\nSpace-time reconstruction is not available for a single sampling point in time.\n')
         else:
             try:
-                fig2.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight', transparent=True)
+                fig2.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
+                             facecolor=fig2.get_facecolor(), transparent=True)
                 fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
                                                                                     alpha, X, Y, Z, Ntau, tau))
             except NameError:

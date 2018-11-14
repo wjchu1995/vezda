@@ -9,8 +9,8 @@ def cli():
     print(textwrap.dedent(
          '''
          Vezda, Version %s
-         Copyright \u00a9 2017-2018 Aaron C. Prunty
-         Distributed under the terms of the Apache License, Version 2.0
+         Copyright \u00a9 2017-2018 Aaron C. Prunty. All Rights Reserved.
+         Distributed under the terms of the Apache License, Version 2.0.
          
          Install location:
              

@@ -101,9 +101,9 @@ def testFunc(pulseFunc, observationPoints, sourcePoint, recordingTimes, velocity
     return testFunc
 
 
-def sampleSpaceTime(receiverPoints, recordingTimes, velocity, tau, x, y, z=None, pulse=None):
+def sampleSpace(receiverPoints, recordingTimes, velocity, x, y, z=None, pulse=None):
     '''
-    Compute the free-space Green functions or test functions for a specified space-time 
+    Compute the free-space Green functions or test functions for a specified 
     sampling grid.
     
     Inputs:
@@ -112,7 +112,6 @@ def sampleSpaceTime(receiverPoints, recordingTimes, velocity, tau, x, y, z=None,
     x: an array of sampling points along the x-axis
     y: an array of sampling points along the y-axis
     z: an array of sampling points along the z-axis (optional)
-    tau: an array of sampling points along the time axis
     pulse: a function of time that describes the shape of the wave (optional)
     velocity: the velocity of the (constant) medium through which the waves propagate
     '''
@@ -124,87 +123,72 @@ def sampleSpaceTime(receiverPoints, recordingTimes, velocity, tau, x, y, z=None,
     # get the number of sampling points along the space and time axes
     Nx = len(x)
     Ny = len(y)
-    Ntau = len(tau)
-    
-    if pulse is None:
-        # Compute free-space Green functions
         
-        if z is None:
-            # space-time is three dimensional
-            
-            # initialize arrays for sampling points and computed Green functions
-            samplingPoints = np.zeros((Nx * Ny, 2))
-            funcArray = np.zeros((Nr, Nt, Nx * Ny))
-            
+    if z is None:
+        # space is two dimensional
+        
+        # initialize arrays for sampling points and computed Green functions
+        samplingPoints = np.zeros((Nx * Ny, 2))
+        funcArray = np.zeros((Nr, Nt, Nx * Ny))
+        
+        if pulse is None:
+            # Compute free-space Green functions
+        
             k = 0
             for ix in trange(Nx, desc='Sampling space'):
                 for iy in range(Ny):
                     samplingPoints[k, :] = np.asarray([x[ix], y[iy]])
                     funcArray[:, :, k] = GreenFunc(receiverPoints, samplingPoints[k, :],
-                             recordingTimes - tau[0], velocity)
+                             recordingTimes, velocity)
                     k += 1
                     sleep(0.001)
             
         else:
-            # space-time is four dimensional
-            Nz = len(z)
+            # Compute free-space test functions
             
-            # initialize arrays for sampling points and computed test functions
-            samplingPoints = np.zeros((Nx * Ny * Nz, 3))
-            funcArray = np.zeros((Nr, Nt, Nx * Ny * Nz))
-            
+            k = 0 # counter for spatial sampling points
+            for ix in trange(Nx, desc='Sampling space', leave=False):
+                for iy in range(Ny):
+                    samplingPoints[k, :] = np.asarray([x[ix], y[iy]])
+                    funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
+                             recordingTimes, velocity)
+                    k += 1
+                    sleep(0.001)
+    
+    else:
+        # space is three dimensional
+        Nz = len(z)
+        
+        # initialize arrays for sampling points and computed test functions
+        samplingPoints = np.zeros((Nx * Ny * Nz, 3))
+        funcArray = np.zeros((Nr, Nt, Nx * Ny * Nz))
+        # Compute free-space test functions
+        
+        if pulse is None:
+            # Compute free-space Green functions
+        
             k = 0
             for ix in trange(Nx, desc='Sampling space'):
                 for iy in range(Ny):
                     for iz in range(Nz):
                         samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz]])
                         funcArray[:, :, k] = GreenFunc(receiverPoints, samplingPoints[k, :],
-                                 recordingTimes - tau[0], velocity)
+                                 recordingTimes, velocity)
                         k += 1
-                        sleep(0.001)
-    
-    else:
-        # Compute free-space test functions
-        
-        if z is None:
-            # space-time is three dimensional
-            
-            # initialize arrays for sampling points and computed test functions
-            samplingPoints = np.zeros((Nx * Ny * Ntau, 3))
-            funcArray = np.zeros((Nr, Nt, Nx * Ny, Ntau))
-            
-            k = 0 # counter for space-time sampling points
-            for it in trange(Ntau, desc='Sampling time'):
-                l = 0 # counter for spatial sampling points
-                for ix in trange(Nx, desc='Sampling space', leave=False):
-                    for iy in range(Ny):
-                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], tau[it]])
-                        funcArray[:, :, l, it] = testFunc(pulse, receiverPoints, samplingPoints[k, :2],
-                                 recordingTimes - tau[it], velocity)
-                        k += 1
-                        l += 1
                         sleep(0.001)
             
         else:
-            # space-time is four dimensional
-            Nz = len(z)
+            # Compute free-space test functions
             
-            # initialize arrays for sampling points and computed test functions
-            samplingPoints = np.zeros((Nx * Ny * Nz * Ntau, 4))
-            funcArray = np.zeros((Nr, Nt, Nx * Ny * Nz, Ntau))
-            
-            k = 0 # counter for space-time sampling points
-            for it in trange(Ntau, desc='Sampling time'):
-                l = 0 # counter for spatial sampling points
-                for ix in trange(Nx, desc='Sampling space', leave=False):
-                    for iy in range(Ny):
-                        for iz in range(Nz):
-                            samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz], tau[it]])
-                            funcArray[:, :, l, it] = testFunc(pulse, receiverPoints, samplingPoints[k, :3],
-                                     recordingTimes - tau[it], velocity)
-                            k += 1
-                            l += 1
-                            sleep(0.001)
+            k = 0 # counter for spatial sampling points
+            for ix in trange(Nx, desc='Sampling space', leave=False):
+                for iy in range(Ny):
+                    for iz in range(Nz):
+                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz]])
+                        funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
+                                 recordingTimes, velocity)
+                        k += 1
+                        sleep(0.001)
                         
     return funcArray, samplingPoints
 

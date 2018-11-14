@@ -56,10 +56,11 @@ def cli():
         
         SVD = np.load('NFO_SVD.npz')
         s = SVD['s']
-        U = SVD['U']
+        Uh = SVD['Uh']
         V = SVD['V']
+        domain = SVD['domain']
         
-        vezda.NFE_Solver.solver(args.medium, s, U, V, alpha)
+        vezda.NFE_Solver.solver(args.medium, s, Uh, V, alpha, domain)
     
     elif args.lse:
         # Solve the Lippmann-Schwinger equation
@@ -70,10 +71,11 @@ def cli():
         
         SVD = np.load('LSO_SVD.npz')
         s = SVD['s']
-        U = SVD['U']
+        Uh = SVD['Uh']
         V = SVD['V']
+        domain = SVD['domain']
         
-        vezda.LSE_Solver.solver(s, U, V, alpha)
+        vezda.LSE_Solver.solver(s, Uh, V, alpha, domain)
         
     else:
         sys.exit(textwrap.dedent(
@@ -88,7 +90,3 @@ def cli():
                     
                 to solve the Lippmann-Schwinger equation.
                 '''))
-    
-    
-        
-    

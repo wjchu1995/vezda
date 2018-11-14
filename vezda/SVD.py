@@ -23,10 +23,12 @@ from scipy.signal import tukey
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-from vezda.sampling_utils import samplingIsCurrent, sampleSpaceTime
+from matplotlib.ticker import FormatStrFormatter
+from vezda.math_utils import nextPow2
+from vezda.sampling_utils import samplingIsCurrent, sampleSpace
 from vezda.plot_utils import (vector_title, remove_keymap_conflicts, plotWiggles,
-                              process_key_vectors, default_params, setFigure)
-from vezda.LinearOperators import asConvolutionOperator
+                              plotFreqVectors, process_key_vectors, default_params, setFigure)
+from vezda.LinearOperators import asConvolutionalOperator
 import numpy as np
 import pickle
 import time
@@ -90,10 +92,14 @@ def cli():
                         help='''Specify the number of singular values/vectors to compute.
                         Must a positive integer between 1 and the order of the square
                         input matrix.''')
+    parser.add_argument('--domain', '-d', type=str, choices=['time', 'freq'],
+                        help='''Specify whether to compute the singular-value decomposition in
+                        the time domain or frequency domain. Default is set to frequency domain
+                        for faster, more accurate performance.''')
     parser.add_argument('--plot', '-p', action='store_true',
                         help='''Plot the computed singular values and vectors.''')
     parser.add_argument('--format', '-f', type=str, default='pdf', choices=['png', 'pdf', 'ps', 'eps', 'svg'],
-                        help='''specify the image format of the saved file. Accepted formats are png, pdf,
+                        help='''Specify the image format of the saved file. Accepted formats are png, pdf,
                         ps, eps, and svg. Default format is set to pdf.''')
     parser.add_argument('--mode', type=str, choices=['light', 'dark'], required=False,
                         help='''Specify whether to view plots in light mode for daytime viewing
@@ -102,26 +108,30 @@ def cli():
     args = parser.parse_args()
     
     if args.nfo and not args.lso:
-        objectString = 'near-field operator'
+        operatorType = 'near-field operator'
+        inputType = 'data'
         try:
-            NFO_SVD = np.load('NFO_SVD.npz')
-            s = NFO_SVD['s']
-            U = NFO_SVD['U']
-            V = NFO_SVD['V']
+            SVD = np.load('NFO_SVD.npz')
+            s = SVD['s']
+            Uh = SVD['Uh']
+            V = SVD['V']
+            domain = SVD['domain']
         
         except FileNotFoundError:
-            s, U, V = None, None, None
+            s, Uh, V, domain = None, None, None, 'freq'
     
     elif not args.nfo and args.lso:
-        objectString = 'Lippmann-Schwinger operator'
+        operatorType = 'Lippmann-Schwinger operator'
+        inputType = 'test functions'
         try:
-            LSO_SVD = np.load('LSO_SVD.npz')
-            s = LSO_SVD['s']
-            U = LSO_SVD['U']
-            V = LSO_SVD['V']
+            SVD = np.load('LSO_SVD.npz')
+            s = SVD['s']
+            Uh = SVD['Uh']
+            V = SVD['V']
+            domain = SVD['domain']
             
         except FileNotFoundError:
-            s, U, V = None, None, None
+            s, Uh, V, domain = None, None, None, 'freq'
             
     elif args.nfo and args.lso:
         sys.exit(textwrap.dedent(
@@ -146,7 +156,7 @@ def cli():
     
     #==============================================================================
     # if an SVD already exists...    
-    if any(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
+    if any(v is not None for v in [s, Uh, V]) and args.numVals is not None and args.plot is True:
         if args.numVals >= 1 and args.numVals == len(s):
             userResponded = False
             print(textwrap.dedent(
@@ -157,7 +167,7 @@ def cli():
                  Enter '1' to specify a new number of values/vectors to compute. (Default)
                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
                  Enter 'q/quit' to exit.
-                 '''.format(s=objectString, n=args.numVals)))
+                 '''.format(s=operatorType, n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -171,7 +181,7 @@ def cli():
                         break
                 elif answer == '2':
                     k = args.numVals
-                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(objectString, k))
+                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(operatorType, k))
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
@@ -218,10 +228,10 @@ def cli():
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
     
-    elif all(v is not None for v in [s, U, V]) and args.numVals is None and args.plot is True:
+    elif all(v is not None for v in [s, Uh, V]) and args.numVals is None and args.plot is True:
         computeSVD = False
         
-    elif all(v is not None for v in [s, U, V]) and args.numVals is not None and args.plot is False:
+    elif all(v is not None for v in [s, Uh, V]) and args.numVals is not None and args.plot is False:
         if args.numVals >= 1 and args.numVals == len(s):
             userResponded = False
             print(textwrap.dedent(
@@ -232,7 +242,7 @@ def cli():
                  Enter '1' to specify a new number of values/vectors to compute. (Default)
                  Enter '2' to recompute a singular-value decomposition for {n} values/vectors.
                  Enter 'q/quit' to exit.
-                 '''.format(s=objectString, n=args.numVals)))
+                 '''.format(s=operatorType, n=args.numVals)))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == '1':
@@ -246,7 +256,7 @@ def cli():
                         break
                 elif answer == '2':
                     k = args.numVals
-                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(objectString, k))
+                    print('Recomputing SVD of the %s for %s singular values/vectors...' %(operatorType, k))
                     userResponded = True
                     computeSVD = True
                 elif answer == 'q' or answer == 'quit':
@@ -293,16 +303,16 @@ def cli():
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 
-    elif all(v is not None for v in [s, U, V]) and args.numVals is None and args.plot is False:
+    elif all(v is not None for v in [s, Uh, V]) and args.numVals is None and args.plot is False:
         sys.exit(textwrap.dedent(
                 '''
                 No action specified. A singular-value decomposition of the %s
                 for %s values/vectors already exists. Please specify at least one of '-k/--numVals'
                 or '-p/--plot' arguments with 'vzsvd' command.
-                ''' %(objectString, len(s))))
+                ''' %(operatorType, len(s))))
     #==============================================================================
     # if an SVD does not already exist...
-    elif any(v is None for v in [s, U, V]) and args.numVals is not None and args.plot is True:
+    elif any(v is None for v in [s, Uh, V]) and args.numVals is not None and args.plot is True:
         if args.numVals >= 1:
             computeSVD = True
             k = args.numVals
@@ -342,7 +352,7 @@ def cli():
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
     
-    elif any(v is None for v in [s, U, V]) and args.numVals is None and args.plot is True:
+    elif any(v is None for v in [s, Uh, V]) and args.numVals is None and args.plot is True:
         userResponded = False
         print(textwrap.dedent(
              '''
@@ -351,7 +361,7 @@ def cli():
              
              Enter '1' to specify a number of singular values/vectors to compute. (Default)
              Enter 'q/quit' to exit.
-             '''.format(s=objectString)))
+             '''.format(s=operatorType)))
         while userResponded == False:
             answer = input('Action: ')
             if answer == '' or answer == '1':
@@ -368,7 +378,7 @@ def cli():
             else:
                 print('Invalid response. Please enter \'1\', or \'q/quit\'.')
         
-    elif any(v is None for v in [s, U, V]) and args.numVals is not None and args.plot is False:
+    elif any(v is None for v in [s, Uh, V]) and args.numVals is not None and args.plot is False:
         if args.numVals >= 1:
             k = args.numVals
             computeSVD = True
@@ -408,20 +418,19 @@ def cli():
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
                 
-    elif any(v is None for v in [s, U, V]) and args.numVals is None and args.plot is False:
+    elif any(v is None for v in [s, Uh, V]) and args.numVals is None and args.plot is False:
         sys.exit(textwrap.dedent(
                 '''
                 Nothing to be done. A singular-value decomposition of the {s} does not exist.
                 Please specify at least one of '-k/--numVals' or '-p/--plot'
                 arguments with 'vzsvd' command.
-                '''.format(s=objectString)))  
+                '''.format(s=operatorType)))  
     #==============================================================================
     # Read in data files 
     datadir = np.load('datadir.npz')
     receiverPoints = np.load(str(datadir['receivers']))
     recordingTimes = np.load(str(datadir['recordingTimes']))
-    t0 = recordingTimes[0]
-    tf = recordingTimes[-1]
+    dt = recordingTimes[1] - recordingTimes[0]
     
     if Path('window.npz').exists():
         windowDict = np.load('window.npz')
@@ -435,19 +444,21 @@ def cli():
         tstart = windowDict['tstart']
         tstop = windowDict['tstop']
         tstep = windowDict['tstep']
-    
-        dt = (tf - t0) / (len(recordingTimes) - 1)
-    
-        twStart = int(round(tstart / dt))
-        twStop = int(round(tstop / dt))
+        
+        # Convert time window parameters to corresponding array indices
+        Tstart = int(round(tstart / dt))
+        Tstop = int(round(tstop / dt))
     
     else:
         rstart = 0
         rstop = receiverPoints.shape[0]
         rstep = 1
         
-        twStart = 0
-        twStop = len(recordingTimes)
+        tstart = recordingTimes[0]
+        tstop = recordingTimes[-1]
+        
+        Tstart = 0
+        Tstop = len(recordingTimes)
         tstep = 1
                 
     # Apply the receiver window
@@ -455,10 +466,19 @@ def cli():
     receiverPoints = receiverPoints[rinterval, :]
 
     # Apply the time window
-    tinterval = np.arange(twStart, twStop, tstep)
+    tinterval = np.arange(Tstart, Tstop, tstep)
     recordingTimes = recordingTimes[tinterval]
+    
+    # Used for getting time and frequency units
+    if Path('plotParams.pkl').exists():
+        plotParams = pickle.load(open('plotParams.pkl', 'rb'))
+    else:
+        plotParams = default_params()
         
     if computeSVD:
+        # get time units for printing time windows or time shifts
+        tu = plotParams['tu']
+        
         if args.nfo:
             
             if Path('noisyData.npy').exists():
@@ -490,7 +510,7 @@ def cli():
             else:
                 # read in the recorded data array
                 X  = np.load(str(datadir['recordedData']))
-            
+                
             if Path('window.npz').exists():
                 print('Detected user-specified window:\n')
                 
@@ -499,11 +519,15 @@ def cli():
                 print('window @ receivers : start =', rstart + 1)
                 print('window @ receivers : stop =', rstop)
                 print('window @ receivers : step =', rstep, '\n')
-            
-                print('window @ time : start =', tstart)
-                print('window @ time : stop =', tstop)
+                
+                if tu != '':
+                    print('window @ time : start = %0.2f %s' %(tstart, tu))
+                    print('window @ time : stop = %0.2f %s' %(tstop, tu))
+                else:
+                    print('window @ time : start =', tstart)
+                    print('window @ time : stop =', tstop)
                 print('window @ time : step =', tstep, '\n')
-             
+                
                 # Apply the source window
                 slabel = windowDict['slabel']
                 sstart = windowDict['sstart']
@@ -565,7 +589,7 @@ def cli():
                             
                         from the command-line for more information on how to set up a
                         sampling grid.
-                        ''' %(objectString)))
+                        ''' %(operatorType)))
             
             pulse = lambda t : pulseFun.pulse(t)
             velocity = pulseFun.velocity
@@ -578,14 +602,23 @@ def cli():
                 TFDict = np.load('VZTestFuncs.npz')
                 
                 if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
-                    print('Moving forward to SVD...')
                     X = TFDict['TFarray']
                     sourcePoints = TFDict['samplingPoints']
+                    print('Moving forward to SVD...')
                     
                 else:
                     print('Recomputing test functions...')
-                    X, sourcePoints = sampleSpaceTime(receiverPoints, recordingTimes, velocity,
-                                                        tau, x, y, z, pulse)
+                    if tau[0] != 0:
+                        if tu != '':
+                            print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        else:
+                            print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                      x, y, z, pulse)
+                    else:
+                        X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                      x, y, z, pulse)
+                    
                     
                     if z is None:
                         np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
@@ -597,9 +630,17 @@ def cli():
                                  x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
             else:                
-                print('\nComputing free-space test functions for the current sampling grid...')
-                X, sourcePoints = sampleSpaceTime(receiverPoints, recordingTimes, velocity,
-                                                    tau, x, y, z, pulse)
+                print('\nComputing free-space test functions for the current space-time sampling grid...')
+                if tau[0] != 0:
+                    if tu != '':
+                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    else:
+                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                  x, y, z, pulse)
+                else:
+                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                  x, y, z, pulse)
                     
                 if z is None:
                     np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
@@ -610,8 +651,38 @@ def cli():
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
                     
-            X = X[:, :, :, 0]
             Nr, Nt, Ns = X.shape
+            
+        #==============================================================================
+        if args.domain is not None:
+            domain = args.domain
+        
+        if domain == 'freq':
+            # Transform convolutional operator into frequency domain and bandpass for efficient SVD
+            print('Transforming %s to the frequency domain...' %(inputType))
+            N = nextPow2(2 * Nt)
+            X = np.fft.rfft(X, n=N, axis=1)
+                
+            if plotParams['fmax'] is None:
+                freqs = np.fft.rfftfreq(N, tstep * dt)
+                plotParams['fmax'] = np.max(freqs)
+        
+            # Apply the frequency window
+            fmin = plotParams['fmin']
+            fmax = plotParams['fmax']
+            fu = plotParams['fu']   # frequency units (e.g., Hz)
+                
+            if fu != '':
+                print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+            else:
+                print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+                
+            df = 1.0 / (N * tstep * dt)
+            startIndex = int(round(fmin / df))
+            stopIndex = int(round(fmax / df))
+                
+            finterval = np.arange(startIndex, stopIndex, 1)
+            X = X[:, finterval, :]
             
         #==============================================================================
         # Compute the k largest singular values (which='LM') of the operator A
@@ -619,14 +690,14 @@ def cli():
         # Left singular vectors are columns of 'U'
         # Right singular vectors are columns of 'V'
         
-        A = asConvolutionOperator(X)
+        A = asConvolutionalOperator(X)
         
         if k == 1:
-            print('Computing SVD of the %s for 1 singular value/vector...' %(objectString))
+            print('Computing SVD of the %s for 1 singular value/vector...' %(operatorType))
         else:
-            print('Computing SVD of the %s for %s singular values/vectors...' %(objectString, k))
+            print('Computing SVD of the %s for %s singular values/vectors...' %(operatorType, k))
         startTime = time.time()
-        U, s, VT = svds(A, k, which='LM')
+        U, s, Vh = svds(A, k, which='LM')
         endTime = time.time()
         print('Elapsed time:', humanReadable(endTime - startTime), '\n')
         
@@ -634,34 +705,76 @@ def cli():
         # (i.e., largest to smallest)
         index = s.argsort()[::-1]   
         s = s[index]
-        U = U[:, index]
-        V = VT[index, :].T
+        Uh = U[:, index].conj().T
+        V = Vh[index, :].conj().T
         
         # Write binary output with numpy
         if args.nfo:
-            np.savez('NFO_SVD.npz', s=s, U=U, V=V)        
+            np.savez('NFO_SVD.npz', s=s, Uh=Uh, V=V, domain=domain)        
         elif args.lso:
-            np.savez('LSO_SVD.npz', s=s, U=U, V=V)
+            np.savez('LSO_SVD.npz', s=s, Uh=Uh, V=V, domain=domain)
     
     #==============================================================================    
-    if args.plot and all(v is not None for v in [s, U, V]):
+    if args.plot and all(v is not None for v in [s, Uh, V]):
         
         Nr = receiverPoints.shape[0]
         Nt = len(recordingTimes)
-        Ns = int(V.shape[0] / Nt)
-        k = len(s)
         
-        # Reshape singular vectors for plotting
-        U = np.reshape(U, (Nr, Nt, k))
-        V = np.reshape(V, (Ns, Nt, k))
+        try:
+            k
+        except NameError:
+            k = len(s)
+            
+        if args.domain is not None and domain != args.domain:
+            if domain == 'freq':
+                s1 = 'time'
+                s2 = 'frequency'
+            else:
+                s1 = 'frequency'
+                s2 = 'time'
+            sys.exit(textwrap.dedent(
+                    '''
+                    Error: Attempted to plot the singular-value decomposition in the %s
+                    domain, but the decomposition was computed in the %s domain.
+                    ''' %(s1, s2)))
+                
+        if domain == 'freq':
+            # plot singular vectors in frequency domain 
+            N = nextPow2(2 * Nt)
+            freqs = np.fft.rfftfreq(N, tstep * dt)
+            
+            if plotParams['fmax'] is None:
+                plotParams['fmax'] = np.max(freqs)
+            
+            # Apply the frequency window
+            fmin = plotParams['fmin']
+            fmax = plotParams['fmax']
+            df = 1.0 / (N * tstep * dt)
+            
+            startIndex = int(round(fmin / df))
+            stopIndex = int(round(fmax / df))
+            finterval = np.arange(startIndex, stopIndex, 1)
+            freqs = freqs[finterval]
+            fmax = freqs[-1]
+        
+            M = len(freqs)         
+            Ns = int(V.shape[0] / M)
+            U = np.reshape(Uh.conj().T, (Nr, M, k))
+            V = np.reshape(V, (Ns, M, k))
+            
+        else: # domain == 'time'
+            M = 2 * Nt - 1
+            Ns = int(V.shape[0] / M)
+            U = np.reshape(Uh.conj().T, (Nr, M, k))
+            V = np.reshape(V, (Ns, M, k))
+            tmin = recordingTimes[0] - dt * tstep * (Nt - 1)
+            tmax = recordingTimes[-1]
+            times = np.linspace(tmin, tmax, M)
         
         if args.nfo:    # Near-field operator
             try:
                 sinterval
             except NameError:
-                sinterval = None
-                
-            if sinterval is None:
                 if Path('window.npz').exists():
                     sstart = windowDict['sstart']
                     sstop = windowDict['sstop']
@@ -687,13 +800,9 @@ def cli():
             try:
                 sourcePoints
             except NameError:
-                sourcePoints = None
-            
-            if sourcePoints is None:
                 if Path('VZTestFuncs.npz').exists():
                     TFDict = np.load('VZTestFuncs.npz')
                     sourcePoints = TFDict['samplingPoints']
-                    sourcePoints = sourcePoints[:, :-1]
                 else:
                     sys.exit(textwrap.dedent(
                             '''
@@ -714,38 +823,92 @@ def cli():
         rstart += 1
         sstart += 1
         
-        if Path('plotParams.pkl').exists():
-            plotParams = pickle.load(open('plotParams.pkl', 'rb'))
-        
-        else:
-            plotParams = default_params()
-            
         if args.mode is not None:
             plotParams['view_mode'] = args.mode
-            pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
         
-        fig_vec, ax1_vec, ax2_vec = setFigure(num_axes=2, mode=plotParams['view_mode'])
-        fig_vals, ax_vals = setFigure(num_axes=1, mode=plotParams['view_mode'])
+        pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
         
         remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
-        
-        ax1_vec.volume = U
-        ax1_vec.index = 0
-        leftTitle = vector_title('left', ax1_vec.index + 1)
-        plotWiggles(ax1_vec, U[:, :, ax1_vec.index], recordingTimes, t0, tf, rstart, rinterval,
-                    receiverPoints, leftTitle, 'left', plotParams)
+        if domain == 'freq':
+            
+            # plot the left singular vectors
+            fig_lvec, ax_lvec_r, ax_lvec_i = setFigure(num_axes=2, mode=plotParams['view_mode'])
+            ax_lvec_r.volume = U.real
+            ax_lvec_i.volume = U.imag
+            ax_lvec_r.index = 0
+            ax_lvec_i.index = 0
+            fig_lvec.suptitle('Left Singular Vector', color=ax_lvec_r.titlecolor, fontsize=16)
+            fig_lvec.subplots_adjust(bottom=0.27, top=0.86)
+            leftTitle_r = vector_title('left', ax_lvec_r.index + 1, 'real')
+            leftTitle_i = vector_title('left', ax_lvec_i.index + 1, 'imag')
+            for ax, title in zip([ax_lvec_r, ax_lvec_i], [leftTitle_r, leftTitle_i]):
+                left_im = plotFreqVectors(ax, ax.volume[:, :, ax.index], freqs, fmin, fmax, rstart, rinterval,
+                                          receiverPoints, title, 'left', plotParams)
+                
+            lp0 = ax_lvec_r.get_position().get_points().flatten()
+            lp1 = ax_lvec_i.get_position().get_points().flatten()
+            left_cax = fig_lvec.add_axes([lp0[0], 0.12, lp1[2]-lp0[0], 0.03])
+            lcbar = fig_lvec.colorbar(left_im, left_cax, orientation='horizontal')
+            lcbar.outline.set_edgecolor(ax_lvec_r.cbaredgecolor)
+            lcbar.ax.tick_params(axis='x', colors=ax_lvec_r.labelcolor)              
+            lcbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            lcbar.set_label('Amplitude',
+                           labelpad=5, rotation=0, fontsize=12, color=ax_lvec_r.labelcolor)
+            fig_lvec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, freqs, fmin, fmax, rstart, sstart, 
+                                                                                    rinterval, sinterval, receiverPoints, 
+                                                                                    sourcePoints, plotParams, 'cmplx_left'))
+            
+            # plot the right singular vectors
+            fig_rvec, ax_rvec_r, ax_rvec_i = setFigure(num_axes=2, mode=plotParams['view_mode'])
+            ax_rvec_r.volume = V.real
+            ax_rvec_i.volume = V.imag
+            ax_rvec_r.index = 0
+            ax_rvec_i.index = 0
+            fig_rvec.suptitle('Right Singular Vector', color=ax_rvec_r.titlecolor, fontsize=16)
+            fig_rvec.subplots_adjust(bottom=0.27, top=0.86)
+            rightTitle_r = vector_title('right', ax_rvec_r.index + 1, 'real')
+            rightTitle_i = vector_title('right', ax_rvec_i.index + 1, 'imag')
+            for ax, title in zip([ax_rvec_r, ax_rvec_i], [rightTitle_r, rightTitle_i]):
+                right_im = plotFreqVectors(ax, ax.volume[:, :, ax.index], freqs, fmin, fmax, sstart, sinterval,
+                                           sourcePoints, title, 'right', plotParams)
+                
+            rp0 = ax_rvec_r.get_position().get_points().flatten()
+            rp1 = ax_rvec_i.get_position().get_points().flatten()
+            right_cax = fig_rvec.add_axes([rp0[0], 0.12, rp1[2]-rp0[0], 0.03])
+            rcbar = fig_rvec.colorbar(right_im, right_cax, orientation='horizontal')  
+            rcbar.outline.set_edgecolor(ax_rvec_r.cbaredgecolor)
+            rcbar.ax.tick_params(axis='x', colors=ax_rvec_r.labelcolor)
+            rcbar.ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            rcbar.set_label('Amplitude',
+                           labelpad=5, rotation=0, fontsize=12, color=ax_lvec_r.labelcolor)
+            fig_rvec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, freqs, fmin, fmax, rstart, sstart, 
+                                                                                    rinterval, sinterval, receiverPoints, 
+                                                                                    sourcePoints, plotParams, 'cmplx_right'))
+            
+        else:
+            # domain == 'time'   
+            fig_vec, ax_lvec, ax_rvec = setFigure(num_axes=2, mode=plotParams['view_mode'])
+            
+            ax_lvec.volume = U
+            ax_lvec.index = 0
+            leftTitle = vector_title('left', ax_lvec.index + 1)
+            plotWiggles(ax_lvec, ax_lvec.volume[:, :, ax_lvec.index], times, tmin, tmax, rstart, rinterval,
+                        receiverPoints, leftTitle, 'left', plotParams)
       
-        ax2_vec.volume = V
-        ax2_vec.index = ax1_vec.index
-        rightTitle = vector_title('right', ax2_vec.index + 1)
-        plotWiggles(ax2_vec, V[:, :, ax2_vec.index], recordingTimes, t0, tf, sstart, sinterval,
-                    sourcePoints, rightTitle, 'right', plotParams)
-        plt.tight_layout()
-        fig_vec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, recordingTimes, t0, tf, rstart, sstart, 
+            ax_rvec.volume = V
+            ax_rvec.index = 0
+            rightTitle = vector_title('right', ax_rvec.index + 1)
+            plotWiggles(ax_rvec, ax_rvec.volume[:, :, ax_rvec.index], times, tmin, tmax, sstart, sinterval,
+                        sourcePoints, rightTitle, 'right', plotParams)
+            fig_vec.tight_layout()
+            fig_vec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, times, tmin, tmax, rstart, sstart, 
                                                                                     rinterval, sinterval, receiverPoints, 
                                                                                     sourcePoints, plotParams))
         #==============================================================================
         # plot the singular values
+        # figure and axis for singular values
+        fig_vals, ax_vals = setFigure(num_axes=1, mode=plotParams['view_mode'])
+        
         n = np.arange(1, k + 1, 1)
         kappa = s[0] / s[-1]    # condition number = max(s) / min(s)
         ax_vals.plot(n, s, '.', clip_on=False, markersize=9, label=r'Condition Number: %0.1e' %(kappa), color=ax_vals.pointcolor)
@@ -759,7 +922,7 @@ def cli():
         ax_vals.set_ylim(bottom=0)
         ax_vals.locator_params(axis='y', nticks=6)
         ax_vals.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        plt.tight_layout()
-        fig_vals.savefig('singularValues.' + args.format, format=args.format, bbox_inches='tight')
+        fig_vals.tight_layout()
+        fig_vals.savefig('singularValues.' + args.format, format=args.format, bbox_inches='tight', facecolor=fig_vals.get_facecolor())
         
         plt.show()
