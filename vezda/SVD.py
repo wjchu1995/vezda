@@ -73,7 +73,7 @@ def isValid(numVals):
             print(textwrap.dedent(
                  '''
                  TypeError: Argument '-k/--numVals' must be a positive integer 
-                 between 1 and the order of the square input matrix.
+                 between 1 and the order of the input matrix.
                  '''))
             break
         
@@ -481,7 +481,7 @@ def cli():
         
         if args.nfo:
             
-            if Path('noisyData.npy').exists():
+            if Path('noisyData.npz').exists():
                 userResponded = False
                 print(textwrap.dedent(
                       '''
@@ -493,12 +493,12 @@ def cli():
                 while userResponded == False:
                     answer = input('Action: ')
                     if answer == '' or answer == 'y' or answer == 'yes':
-                        print('Proceeding with singular-value decomposition of noisy data...')
+                        print('Proceeding with singular-value decomposition using noisy data...')
                         # read in the noisy data array
-                        X = np.load('noisyData.npy')
+                        X = np.load('noisyData.npz')['noisyData']
                         userResponded = True
                     elif answer == 'n' or answer == 'no':
-                        print('Proceeding with singular-value decomposition of noise-free data...')
+                        print('Proceeding with singular-value decomposition using noise-free data...')
                         # read in the recorded data array
                         X  = np.load(str(datadir['recordedData']))
                         userResponded = True
@@ -608,15 +608,19 @@ def cli():
                     
                 else:
                     print('Recomputing test functions...')
+                    # set up the convolution times based on length of recording time interval
+                    T = recordingTimes[-1] - recordingTimes[0]
+                    convolutionTimes = np.linspace(-T, T, 2 * len(recordingTimes) - 1)
+                    
                     if tau[0] != 0:
                         if tu != '':
-                            print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                            print('Shifting test functions to lag time %0.2f %s...' %(tau[0], tu))
                         else:
-                            print('Shifting test functions to source time %0.2f...' %(tau[0]))
-                        X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                            print('Shifting test functions to lag time %0.2f...' %(tau[0]))
+                        X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes - tau[0], velocity,
                                                       x, y, z, pulse)
                     else:
-                        X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                        X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes, velocity,
                                                       x, y, z, pulse)
                     
                     
@@ -765,11 +769,10 @@ def cli():
         else: # domain == 'time'
             M = 2 * Nt - 1
             Ns = int(V.shape[0] / M)
-            U = np.reshape(Uh.conj().T, (Nr, M, k))
+            U = np.reshape(Uh.T, (Nr, M, k))
             V = np.reshape(V, (Ns, M, k))
-            tmin = recordingTimes[0] - dt * tstep * (Nt - 1)
-            tmax = recordingTimes[-1]
-            times = np.linspace(tmin, tmax, M)
+            T = recordingTimes[-1] - recordingTimes[0]
+            times = np.linspace(-T, T, M)
         
         if args.nfo:    # Near-field operator
             try:
@@ -892,16 +895,16 @@ def cli():
             ax_lvec.volume = U
             ax_lvec.index = 0
             leftTitle = vector_title('left', ax_lvec.index + 1)
-            plotWiggles(ax_lvec, ax_lvec.volume[:, :, ax_lvec.index], times, tmin, tmax, rstart, rinterval,
+            plotWiggles(ax_lvec, ax_lvec.volume[:, :, ax_lvec.index], times, -T, T, rstart, rinterval,
                         receiverPoints, leftTitle, 'left', plotParams)
       
             ax_rvec.volume = V
             ax_rvec.index = 0
             rightTitle = vector_title('right', ax_rvec.index + 1)
-            plotWiggles(ax_rvec, ax_rvec.volume[:, :, ax_rvec.index], times, tmin, tmax, sstart, sinterval,
+            plotWiggles(ax_rvec, ax_rvec.volume[:, :, ax_rvec.index], times, -T, T, sstart, sinterval,
                         sourcePoints, rightTitle, 'right', plotParams)
             fig_vec.tight_layout()
-            fig_vec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, times, tmin, tmax, rstart, sstart, 
+            fig_vec.canvas.mpl_connect('key_press_event', lambda event: process_key_vectors(event, times, -T, T, rstart, sstart, 
                                                                                     rinterval, sinterval, receiverPoints, 
                                                                                     sourcePoints, plotParams))
         #==============================================================================

@@ -180,7 +180,7 @@ def cli():
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
         wiggleType = 'data'
-        if Path('noisyData.npy').exists():
+        if Path('noisyData.npz').exists():
             userResponded = False
             print(textwrap.dedent(
                   '''
@@ -194,7 +194,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     print('Proceeding with plot of noisy data...')
                     # read in the noisy data array
-                    X = np.load('noisyData.npy')
+                    X = np.load('noisyData.npz')['noisyData']
                     userResponded = True
                 elif answer == 'n' or answer == 'no':
                     print('Proceeding with plot of noise-free data...')
@@ -221,7 +221,7 @@ def cli():
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
         wiggleType = 'data'
-        if Path('noisyData.npy').exists():
+        if Path('noisyData.npz').exists():
             userResponded = False
             print(textwrap.dedent(
                   '''
@@ -235,7 +235,7 @@ def cli():
                 if answer == '' or answer == 'y' or answer == 'yes':
                     print('Proceeding with plot of noisy data...')
                     # read in the noisy data array
-                    X = np.load('noisyData.npy')
+                    X = np.load('noisyData.npz')['noisyData']
                     userResponded = True
                 elif answer == 'n' or answer == 'no':
                     print('Proceeding with plot of noise-free data...')
@@ -262,7 +262,7 @@ def cli():
         wiggleType = 'testfunc'
         if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
             X = np.load(str(datadir['testFuncs']))
-            time = recordingTimes[tinterval]
+            time = np.load(str(datadir['convolutionTimes']))
             sourcePoints = np.load(str(datadir['samplingPoints']))            
             X = X[rinterval, :, :]
         
@@ -285,24 +285,26 @@ def cli():
             peakFreq = pulseFun.peakFreq
             peakTime = pulseFun.peakTime
             
+            # set up the convolution times based on the length of the recording time interval
             time = recordingTimes[tinterval]
+            T = time[-1] - time[0]
+            time = np.linspace(-T, T, 2 * len(time) - 1)
             if samplingIsCurrent(TFDict, receiverPoints, time, velocity, tau, x, y, z, peakFreq, peakTime):
                 print('Moving forward to plot test functions...')
                 X = TFDict['TFarray']
                 sourcePoints = TFDict['samplingPoints']
                 
-                    
             else:
-                print('Recomputing test functions...')
                 if tau[0] != 0:
                     tu = plotParams['tu']
                     if tu != '':
-                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                     else:
-                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
                     X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
                                                   x, y, z, pulse)
                 else:
+                    print('Recomputing test functions...')
                     X, sourcePoints = sampleSpace(receiverPoints, time, velocity,
                                                   x, y, z, pulse)
                     
@@ -331,7 +333,7 @@ def cli():
                 
                 if answer == '' or answer == '1':
                     X = np.load(str(datadir['testFuncs']))
-                    time = recordingTimes[tinterval]
+                    time = np.load(str(datadir['convolutionTimes']))
                     sourcePoints = np.load(str(datadir['samplingPoints']))
                     X = X[rinterval, :, :]                    
                     userResponded = True
@@ -356,23 +358,26 @@ def cli():
                     peakFreq = pulseFun.peakFreq
                     peakTime = pulseFun.peakTime
                     
+                    # set up the convolution times based on the length of the recording time interval
                     time = recordingTimes[tinterval]
+                    T = time[-1] - time[0]
+                    time = np.linspace(-T, T, 2 * len(time) - 1)
                     if samplingIsCurrent(TFDict, receiverPoints, time, velocity, tau, x, y, z, peakFreq, peakTime):
                         print('Moving forward to plot test functions...')
                         X = TFDict['TFarray']
                         sourcePoints = TFDict['samplingPoints']
                     
-                    else:
-                        print('Recomputing test functions...')
+                    else:                
                         if tau[0] != 0:
                             tu = plotParams['tu']
                             if tu != '':
-                                print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                                print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                             else:
-                                print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                                print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
                             X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
                                                           x, y, z, pulse)
                         else:
+                            print('Recomputing test functions...')
                             X, sourcePoints = sampleSpace(receiverPoints, time, velocity,
                                                           x, y, z, pulse)
                     
@@ -395,7 +400,10 @@ def cli():
         
         else:                
             print('\nComputing free-space test functions for the current space-time sampling grid...')
+            # set up the convolution times based on the length of the recording time interval
             time = recordingTimes[tinterval]
+            T = time[-1] - time[0]
+            time = np.linspace(-T, T, 2 * len(time) - 1)
             
             samplingGrid = np.load('samplingGrid.npz')
             x = samplingGrid['x']
@@ -414,9 +422,9 @@ def cli():
             if tau[0] != 0:
                 tu = plotParams['tu']
                 if tu != '':
-                    print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                 else:
-                    print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    print('Computing test functions for focusing time %0.2f...' %(tau[0]))
                 X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
                                               x, y, z, pulse)
             else:
@@ -443,8 +451,8 @@ def cli():
         sstep = windowDict['sstep']
             
     else:
-        t0 = recordingTimes[0]
-        tf = recordingTimes[-1]
+        t0 = time[0]
+        tf = time[-1]
         
         sstart = 0
         sstop = X.shape[2]

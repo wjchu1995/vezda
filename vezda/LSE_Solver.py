@@ -35,7 +35,7 @@ def solver(s, Uh, V, alpha, domain):
         sourcePoints = np.load(str(datadir['sources']))
     else:
         sourcePoints = None
-    if Path('noisyData.npy').exists():
+    if Path('noisyData.npz').exists():
         userResponded = False
         print(textwrap.dedent(
               '''
@@ -50,7 +50,7 @@ def solver(s, Uh, V, alpha, domain):
             if answer == '' or answer == 'y' or answer == 'yes':
                 print('Proceeding with solution of Lippmann-Schwinger equation with noisy data...')
                 # read in the noisy data array
-                recordedData = np.load('noisyData.npy')
+                recordedData = np.load('noisyData.npz')['noisyData']
                 userResponded = True
             elif answer == 'n' or answer == 'no':
                 print('Proceeding with solution of Lippmann-Schwinger equation with noise-free data...')
@@ -179,6 +179,7 @@ def solver(s, Uh, V, alpha, domain):
     if domain == 'freq':
         # Transform data into the frequency domain and bandpass for efficient solution
         # to Lippmann-Schwinger equation
+        print('Transforming data to the frequency domain...')
     
         N = nextPow2(2 * len(recordingTimes))
         recordedData = np.fft.rfft(recordedData, n=N, axis=1)

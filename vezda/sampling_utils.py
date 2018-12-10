@@ -17,53 +17,11 @@ from scipy.linalg import norm
 from tqdm import trange
 from time import sleep
 
-def GreenFunc(observationPoints, sourcePoint, recordingTimes, velocity):
-    '''
-    Computes the Green function (radiating fundamental solution) in 
-    two- or three-dimensional space.
-    
-     Inputs:
-         observationPoints: Nr x (2,3) array, specifies the coordinates of the 
-              observation points, where 'Nr' is the number of the points.
-         sourcePoint: 1 x (2,3) array specifying the source point. 
-         recordingTimes: recording time array (row or column vector of length 'Nt')
-         velocity: a scalar specifying the wave speed
-    
-     Output:
-         G: Nr x Nt array containing the computed Green function
-    '''
-    # get the number of space dimensions (2 or 3)
-    dim = observationPoints.shape[1]
-    
-    # compute the distance between the observation points and the source point
-    r = norm(observationPoints - sourcePoint, axis=1) # |x - z|
-    
-    T, R = np.meshgrid(recordingTimes, r)
-    retardedTime = T - R / velocity
-    
-    # get machine precision
-    eps = np.finfo(float).eps     # about 2e-16 (so we never divide by zero)
-    
-    if dim == 2:
-        sqrtTR = np.lib.scimath.sqrt(T**2 - (R / velocity)**2)
-        G = np.divide(1, 2 * np.pi * sqrtTR + eps)
-    
-    elif dim == 3:
-        tol = recordingTimes[1] - recordingTimes[0]
-        impulse = np.zeros(retardedTime.shape)
-        impulse[np.abs(retardedTime) < tol] = 1
-        G = np.divide(impulse, 4 * np.pi * R + eps)
-        
-    G[retardedTime<=0] = 0    # causality
-    G = np.real(G)        
-    
-    return G
-
-
 def testFunc(pulseFunc, observationPoints, sourcePoint, recordingTimes, velocity):
     '''
-    Computes the right-hand side test function in the near-field equation in 
-    two- or three-dimensional space.
+    Computes test functions for two- or three-dimensional free space. Test functions
+    are simply free-space Green functions convolved with a smooth time-dependent pulse
+    function.
     
      Inputs:
          pulseFunc: a function handle, gives the time depedence of the pulse function
@@ -130,30 +88,16 @@ def sampleSpace(receiverPoints, recordingTimes, velocity, x, y, z=None, pulse=No
         # initialize arrays for sampling points and computed Green functions
         samplingPoints = np.zeros((Nx * Ny, 2))
         funcArray = np.zeros((Nr, Nt, Nx * Ny))
-        
-        if pulse is None:
-            # Compute free-space Green functions
-        
-            k = 0
-            for ix in trange(Nx, desc='Sampling space'):
-                for iy in range(Ny):
-                    samplingPoints[k, :] = np.asarray([x[ix], y[iy]])
-                    funcArray[:, :, k] = GreenFunc(receiverPoints, samplingPoints[k, :],
-                             recordingTimes, velocity)
-                    k += 1
-                    sleep(0.001)
             
-        else:
-            # Compute free-space test functions
-            
-            k = 0 # counter for spatial sampling points
-            for ix in trange(Nx, desc='Sampling space', leave=False):
-                for iy in range(Ny):
-                    samplingPoints[k, :] = np.asarray([x[ix], y[iy]])
-                    funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
-                             recordingTimes, velocity)
-                    k += 1
-                    sleep(0.001)
+        # Compute free-space test functions
+        k = 0 # counter for spatial sampling points
+        for ix in trange(Nx, desc='Sampling space', leave=False):
+            for iy in range(Ny):
+                samplingPoints[k, :] = np.asarray([x[ix], y[iy]])
+                funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
+                         recordingTimes, velocity)
+                k += 1
+                sleep(0.001)
     
     else:
         # space is three dimensional
@@ -162,33 +106,17 @@ def sampleSpace(receiverPoints, recordingTimes, velocity, x, y, z=None, pulse=No
         # initialize arrays for sampling points and computed test functions
         samplingPoints = np.zeros((Nx * Ny * Nz, 3))
         funcArray = np.zeros((Nr, Nt, Nx * Ny * Nz))
+        
         # Compute free-space test functions
-        
-        if pulse is None:
-            # Compute free-space Green functions
-        
-            k = 0
-            for ix in trange(Nx, desc='Sampling space'):
-                for iy in range(Ny):
-                    for iz in range(Nz):
-                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz]])
-                        funcArray[:, :, k] = GreenFunc(receiverPoints, samplingPoints[k, :],
-                                 recordingTimes, velocity)
-                        k += 1
-                        sleep(0.001)
-            
-        else:
-            # Compute free-space test functions
-            
-            k = 0 # counter for spatial sampling points
-            for ix in trange(Nx, desc='Sampling space', leave=False):
-                for iy in range(Ny):
-                    for iz in range(Nz):
-                        samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz]])
-                        funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
-                                 recordingTimes, velocity)
-                        k += 1
-                        sleep(0.001)
+        k = 0 # counter for spatial sampling points
+        for ix in trange(Nx, desc='Sampling space', leave=False):
+            for iy in range(Ny):
+                for iz in range(Nz):
+                    samplingPoints[k, :] = np.asarray([x[ix], y[iy], z[iz]])
+                    funcArray[:, :, k] = testFunc(pulse, receiverPoints, samplingPoints[k, :],
+                             recordingTimes, velocity)
+                    k += 1
+                    sleep(0.001)
                         
     return funcArray, samplingPoints
 
@@ -205,7 +133,7 @@ def samplingIsCurrent(Dict, receiverPoints, recordingTimes, velocity, tau, x, y,
                 if Dict['velocity'] == velocity:
                     print('Background velocity is consistent...')
                     
-                    if np.isin(Dict['receivers'], receiverPoints).all():
+                    if np.array_equal(Dict['receivers'], receiverPoints):
                         print('Receiver points are consistent...')
                         
                         if np.array_equal(Dict['time'], recordingTimes):
@@ -236,7 +164,7 @@ def samplingIsCurrent(Dict, receiverPoints, recordingTimes, velocity, tau, x, y,
                 if Dict['peakFreq'] == peakFreq and Dict['peakTime'] == peakTime and Dict['velocity'] == velocity:
                     print('Pulse function and background velocity are consistent...')
                     
-                    if np.isin(Dict['receivers'], receiverPoints).all():
+                    if np.array_equal(Dict['receivers'], receiverPoints):
                         print('Receiver points are consistent...')
                         
                         if np.array_equal(Dict['time'], recordingTimes):
@@ -270,7 +198,7 @@ def samplingIsCurrent(Dict, receiverPoints, recordingTimes, velocity, tau, x, y,
                 if Dict['velocity'] == velocity:
                     print('Background velocity is consistent...')
                     
-                    if np.isin(Dict['receivers'], receiverPoints).all():
+                    if np.array_equal(Dict['receivers'], receiverPoints):
                         print('Receiver points are consistent...')
                     
                         if np.array_equal(Dict['time'], recordingTimes):
@@ -301,7 +229,7 @@ def samplingIsCurrent(Dict, receiverPoints, recordingTimes, velocity, tau, x, y,
                 if Dict['peakFreq'] == peakFreq and Dict['peakTime'] == peakTime and Dict['velocity'] == velocity:
                     print('Pulse function and background velocity are consistent...')
                     
-                    if np.isin(Dict['receivers'], receiverPoints).all():
+                    if np.array_equal(Dict['receivers'], receiverPoints):
                         print('Receiver points are consistent...')
                     
                         if np.array_equal(Dict['time'], recordingTimes):

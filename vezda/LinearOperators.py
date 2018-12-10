@@ -52,29 +52,31 @@ def asConvolutionalOperator(data):
     '''
     
     Nr, Nm, Ns = data.shape
-    if np.issubdtype(data.dtype, np.float_):
+    if np.issubdtype(data.dtype, np.floating):
         # input data are real (time domain)
     
         # get the next power of 2 greater than or equal to 2*Nm
         # for efficient circular convolution via FFT
         N = nextPow2(2 * Nm)
-    
+        
+        # Fourier transform the data over the time axis=1
+        U = rfft(data, n=N, axis=1)
+        
         def forwardOperator(x):        
             # definition of the forward convolutional operator
             
             #reshape x into a matrix X
             X = np.reshape(x, (2*Nm-1, Ns), order='F')
+            X = rfft(X, n=N, axis=0)
             
             # initialize the output array Y for the range of Matrix
             Y = np.zeros((2*Nm-1, Nr), dtype=data.dtype)
                 
             for i in range(Nr):
                 # Compute the matrix-vector product for Matrix * X
-                U = data[i, :, :]
-                # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolution = irfft(rfft(U, n=N, axis=0) * rfft(X, n=N, axis=0), axis=0)
-                convolutionMatrix = circularConvolution[:(2*Nm-1), :]
-                Y[:, i] = np.sum(convolutionMatrix, axis=1) # sum over sources
+                circularConvolution = irfft(U[i, :, :] * X, axis=0)
+                circularConvolution = circularConvolution[:(2*Nm-1), :]
+                Y[:, i] = np.sum(circularConvolution, axis=1) # sum over sources
                 
             y = np.reshape(Y, ((2*Nm-1) * Nr, 1), order='F')
         
@@ -83,19 +85,17 @@ def asConvolutionalOperator(data):
         def adjointOperator(x):               
             # definition of the adjoint convolutional operator
  
-            # X multiplies Matrix.T (time reversal), so time reverse X
-            X = np.flipud(np.reshape(x, (2*Nm-1, Nr), order='F'))
+            X = np.reshape(x, (2*Nm-1, Nr), order='F')
+            X = rfft(X, n=N, axis=0)
         
             # initialize the output array Y for the range of Matrix.T
             Y = np.zeros((2*Nm-1, Ns), dtype=data.dtype)
             
             for j in range(Ns):
                 # Compute the matrix-vector product for Matrix.T * X
-                UT = data[:, :, j].T
-                # Circular convolution: pad time axis (axis=0) with zeros to length N
-                circularConvolutionT = irfft(rfft(UT, n=N, axis=0) * rfft(X, n=N, axis=0), axis=0)
-                convolutionMatrixT = np.flipud(circularConvolutionT[:(2*Nm-1), :])
-                Y[:, j] = np.sum(convolutionMatrixT, axis=1) # sum over receivers
+                circularConvolutionT = irfft(U[:, :, j].conj().T * X, axis=0)
+                circularConvolutionT = circularConvolutionT[:(2*Nm-1), :]
+                Y[:, j] = np.sum(circularConvolutionT, axis=1) # sum over receivers
             
             y = np.reshape(Y, ((2*Nm-1) * Ns, 1), order='F')
         

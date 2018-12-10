@@ -302,8 +302,6 @@ def cli():
             sourcePoints = sourcePoints[sinterval, :]
         
     #==============================================================================
-    
-    
     if Path('imageNFE.npz').exists() and not Path('imageLSE.npz').exists():
         if args.lse:
             sys.exit(textwrap.dedent(
@@ -320,8 +318,11 @@ def cli():
             Z = Dict['Z']
         else:
             Z = None
-        tau = Dict['tau']
-        Ntau = len(tau)
+        if 'tau' in Dict:
+            tau = Dict['tau']
+            Ntau = len(tau)
+        else:
+            tau = None
         alpha = Dict['alpha']
         flag = 'NFE'
         fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
@@ -356,8 +357,11 @@ def cli():
                 Z = Dict['Z']
             else:
                 Z = None
-            tau = Dict['tau']
-            Ntau = len(tau)
+            if 'tau' in Dict:
+                tau = Dict['tau']
+                Ntau = len(tau)
+            else:
+                tau = None
             alpha = Dict['alpha']
             flag = 'NFE'
             fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
@@ -416,9 +420,6 @@ def cli():
     try:
         ax1
     except NameError:
-        ax1 = None
-    
-    if ax1 is None:
         fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=receiverPoints.shape[1])
     
     plotMap(ax1, None, receiverPoints, sourcePoints, scatterer, 'data', plotParams)

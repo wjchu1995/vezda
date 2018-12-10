@@ -13,20 +13,30 @@
 # limitations under the License.
 #==============================================================================
 
+import os
 import sys
 import argparse
 import textwrap
 import numpy as np
+from scipy.signal import tukey
 from vezda.plot_utils import setFigure, default_params
+from vezda.sampling_utils import samplingIsCurrent, sampleSpace
 from vezda.signal_utils import compute_spectrum
 import matplotlib.pyplot as plt
 from pathlib import Path
 import pickle
 
+sys.path.append(os.getcwd())
+import pulseFun
+
 def cli():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--data', action='store_true',
+                        help='Plot the frequency spectrum of the recorded data. (Default)')
+    parser.add_argument('--testfunc', action='store_true',
+                        help='Plot the frequency spectrum of the simulated test functions.')
     parser.add_argument('--power', action='store_true',
-                        help='''Plot the mean power spectrum of the data. Default is to plot the
+                        help='''Plot the mean power spectrum of the input signals. Default is to plot the
                         mean amplitude spectrum of the Fourier transform.''')
     parser.add_argument('--fmin', type=float,
                         help='Specify the minimum frequency of the amplitude/power spectrum plot. Default is set to 0.')
@@ -45,243 +55,328 @@ def cli():
     args = parser.parse_args()
     
     #==============================================================================        
-    # Load the receiver coordinates and recording times from the data directory
+    # Load the recording times from the data directory
     datadir = np.load('datadir.npz')
+    receiverPoints = np.load(str(datadir['receivers']))
     recordingTimes = np.load(str(datadir['recordingTimes']))
-        
-    if Path('noisyData.npy').exists():
-        userResponded = False
-        print(textwrap.dedent(
-              '''
-              Detected that band-limited noise has been added to the data array.
-              Would you like to plot the amplitude/power spectrum of the noisy data? ([y]/n)
-              
-              Enter 'q/quit' exit the program.
-              '''))
-        while userResponded == False:
-            answer = input('Action: ')
-            if answer == '' or answer == 'y' or answer == 'yes':
-                print('Proceeding with noisy data...')
-                # read in the noisy data array
-                recordedData = np.load('noisyData.npy')
-                userResponded = True
-            elif answer == 'n' or answer == 'no':
-                print('Proceeding with noise-free data...')
-                # read in the recorded data array
-                recordedData  = np.load(str(datadir['recordedData']))
-                userResponded = True
-            elif answer == 'q' or answer == 'quit':
-                sys.exit('Exiting program.\n')
-            else:
-                print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
-                
-    else:
-        # read in the recorded data array
-        recordedData  = np.load(str(datadir['recordedData']))
-    
-    # Compute length of time step.
     dt = recordingTimes[1] - recordingTimes[0]
     
-    # Load the windowing parameters for the receiver and time axes of
-    # the 3D data array
     if Path('window.npz').exists():
         windowDict = np.load('window.npz')
         
-        # Receiver window parameters
+        # Apply the receiver window
         rstart = windowDict['rstart']
         rstop = windowDict['rstop']
         rstep = windowDict['rstep']
         
-        # Source window parameters
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
+        # Apply the time window
+        tstart = windowDict['tstart']
+        tstop = windowDict['tstop']
+        tstep = windowDict['tstep']
         
+        # Convert time window parameters to corresponding array indices
+        Tstart = int(round(tstart / dt))
+        Tstop = int(round(tstop / dt))
+    
     else:
-        # Set default window parameters if user did
-        # not specify window parameters.
-        
-        # Receiver window parameters
         rstart = 0
-        rstop = recordedData.shape[0]
+        rstop = receiverPoints.shape[0]
         rstep = 1
         
-        # Source window parameters
-        sstart = 0
-        sstop = recordedData.shape[2]
-        sstep = 1
+        tstart = recordingTimes[0]
+        tstop = recordingTimes[-1]
         
-    # Slice the data array according to the receiver/source window parameters
-    rinterval = np.arange(rstart, rstop, rstep)    
-    sinterval = np.arange(sstart, sstop, sstep)
-    recordedData = recordedData[rinterval, :, :]
-    recordedData = recordedData[:, :, sinterval]
-        
-    freqs, amplitudes = compute_spectrum(recordedData, dt, args.power)
+        Tstart = 0
+        Tstop = len(recordingTimes)
+        tstep = 1
+                
+    # Apply the receiver window
+    rinterval = np.arange(rstart, rstop, rstep)
+    receiverPoints = receiverPoints[rinterval, :]
+
+    # Apply the time window
+    tinterval = np.arange(Tstart, Tstop, tstep)
+    recordingTimes = recordingTimes[tinterval]
     
+    # Used for getting time and frequency units
     if Path('plotParams.pkl').exists():
         plotParams = pickle.load(open('plotParams.pkl', 'rb'))
-        
-        if args.power:
-            plotLabel = 'power'
-            plotParams['freq_title'] = 'Mean Power Spectrum'
-            plotParams['freq_ylabel'] = 'Power'
+    else:
+        plotParams = default_params()
+    
+    if all(v is True for v in [args.data, args.testfunc]):
+        sys.exit(textwrap.dedent(
+                '''
+                Error: Cannot plot frequency spectrum of both recorded data and
+                simulated test functions. Use
+                
+                    vzspectra --data
+                    
+                to plot the frequency spectrum of the recorded data or
+                
+                    vzspectra --testfuncs
+                    
+                to plot the frequency spectrum of the simulated test functions.
+                '''))
+    
+    elif (args.data and not args.testfunc) or all(v is not True for v in [args.data, args.testfunc]):
+        # default is to plot spectra of data if user does not specify either args.data or args.testfunc
+        if Path('noisyData.npz').exists():
+            userResponded = False
+            print(textwrap.dedent(
+                  '''
+                  Detected that band-limited noise has been added to the data array.
+                  Would you like to plot the amplitude/power spectrum of the noisy data? ([y]/n)
+              
+                 Enter 'q/quit' exit the program.
+                 '''))
+            while userResponded == False:
+                answer = input('Action: ')
+                if answer == '' or answer == 'y' or answer == 'yes':
+                    print('Proceeding with noisy data...')
+                    # read in the noisy data array
+                    X = np.load('noisyData.npz')['noisyData']
+                    userResponded = True
+                elif answer == 'n' or answer == 'no':
+                    print('Proceeding with noise-free data...')
+                    # read in the recorded data array
+                    X  = np.load(str(datadir['recordedData']))
+                    userResponded = True
+                elif answer == 'q' or answer == 'quit':
+                    sys.exit('Exiting program.\n')
+                else:
+                    print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
+                
         else:
-            plotLabel = 'amplitude'
-            plotParams['freq_title'] = 'Mean Amplitude Spectrum'
-            plotParams['freq_ylabel'] = 'Amplitude'
-        
-        if args.fmin is not None: 
-            if args.fmin >= 0:
-                if args.fmax is not None:
-                    if args.fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                        plotParams['fmax'] = args.fmax
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The maximum frequency of the %s spectrum plot must
-                                be greater than the mininum frequency.
-                                ''' %(plotLabel)))   
-                else:
-                    fmax = plotParams['fmax']
-                    if fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The specified minimum frequency of the %s spectrum 
-                                plot must be less than the maximum frequency.
-                                ''' %(plotLabel)))                                        
-            else:
-                sys.exit(textwrap.dedent(
-                        '''
-                        ValueError: The specified minimum frequency of the %s spectrum 
-                        plot must be nonnegative.
-                        ''' %(plotLabel)))
+            # read in the recorded data array
+            X = np.load(str(datadir['recordedData']))
+    
+        # Load the windowing parameters for the receiver and time axes of
+        # the 3D data array
+        if Path('window.npz').exists():
+            print('Detected user-specified window:\n')
+                
+            # For display/printing purposes, count receivers with one-based
+            # indexing. This amounts to incrementing the rstart parameter by 1
+            print('window @ receivers : start =', rstart + 1)
+            print('window @ receivers : stop =', rstop)
+            print('window @ receivers : step =', rstep, '\n')
             
-        #===============================================================================
-        if args.fmax is not None:
-            if args.fmin is not None:
-                if args.fmin >= 0:
-                    if args.fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                        plotParams['fmax'] = args.fmax
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The maximum frequency of the %s spectrum plot must
-                                be greater than the mininum frequency.
-                                ''' %(plotLabel)))
-                else:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            ValueError: The specified minimum frequency of the %s spectrum 
-                            plot must be nonnegative.
-                            ''' %(plotLabel)))
+            tu = plotParams['tu']
+            if tu != '':
+                print('window @ time : start = %0.2f %s' %(tstart, tu))
+                print('window @ time : stop = %0.2f %s' %(tstop, tu))
             else:
-                fmin = plotParams['fmin']
-                if args.fmax > fmin:
+                print('window @ time : start =', tstart)
+                print('window @ time : stop =', tstop)
+            print('window @ time : step =', tstep, '\n')
+                
+            # Apply the source window
+            slabel = windowDict['slabel']
+            sstart = windowDict['sstart']
+            sstop = windowDict['sstop']
+            sstep = windowDict['sstep']
+            sinterval = np.arange(sstart, sstop, sstep)
+                
+            # For display/printing purposes, count recordings/sources with one-based
+            # indexing. This amounts to incrementing the sstart parameter by 1
+            print('window @ %s : start = %s' %(slabel, sstart + 1))
+            print('window @ %s : stop = %s' %(slabel, sstop))
+            print('window @ %s : step = %s\n' %(slabel, sstep))                
+                
+            print('Applying window to data volume...')
+            X = X[rinterval, :, :]
+            X = X[:, tinterval, :]
+            X = X[:, :, sinterval]
+            
+            # Apply tapered cosine (Tukey) window to time signals.
+            # This ensures the fast fourier transform (FFT) used in
+            # the definition of the matrix-vector product below is
+            # acting on a function that is continuous at its edges.
+                
+            Nt = X.shape[1]
+            peakFreq = pulseFun.peakFreq
+            # Np : Number of samples in the dominant period T = 1 / peakFreq
+            Np = int(round(1 / (tstep * dt * peakFreq)))
+            # alpha is set to taper over 6 of the dominant period of the
+            # pulse function (3 periods from each end of the signal)
+            alpha = 6 * Np / Nt
+            print('Tapering time signals with Tukey window: %d'
+                  %(int(round(alpha * 100))) + '%')
+            TukeyWindow = tukey(Nt, alpha)
+            X *= TukeyWindow[None, :, None]
+        
+    elif not args.data and args.testfunc:
+        if Path('samplingGrid.npz').exists():
+            samplingGrid = np.load('samplingGrid.npz')
+            x = samplingGrid['x']
+            y = samplingGrid['y']
+            tau = samplingGrid['tau']
+            if 'z' in samplingGrid:
+                z = samplingGrid['z']
+            else:
+                z = None
+                    
+        else:
+            sys.exit(textwrap.dedent(
+                    '''
+                    A sampling grid needs to be set up and test functions
+                    computed before their Fourier spectrum can be plotted.
+                    Enter:
+                        
+                        vzgrid --help
+                        
+                    from the command-line for more information on how to set up a
+                    sampling grid.
+                    '''))
+            
+        pulse = lambda t : pulseFun.pulse(t)
+        velocity = pulseFun.velocity
+        peakFreq = pulseFun.peakFreq
+        peakTime = pulseFun.peakTime
+            
+        if Path('VZTestFuncs.npz').exists():
+            print('\nDetected that free-space test functions have already been computed...')
+            print('Checking consistency with current space-time sampling grid...')
+            TFDict = np.load('VZTestFuncs.npz')
+                
+            if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                X = TFDict['TFarray']
+                sourcePoints = TFDict['samplingPoints']
+                    
+            else:
+                print('Recomputing test functions...')
+                if tau[0] != 0:
+                    tu = plotParams['tu']
+                    if tu != '':
+                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    else:
+                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                                  x, y, z, pulse)
+                else:
+                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                                  x, y, z, pulse)
+                    
+                    
+                if z is None:
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                             x=x, y=y, tau=tau, samplingPoints=sourcePoints)
+                else:
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                             x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+                    
+        else:                
+            print('\nComputing free-space test functions for the current space-time sampling grid...')
+            if tau[0] != 0:
+                if tu != '':
+                    print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                else:
+                    print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
+                                              x, y, z, pulse)
+            else:
+                X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                                              x, y, z, pulse)
+                
+            if z is None:
+                np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                         x=x, y=y, tau=tau, samplingPoints=sourcePoints)
+            else:
+                np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                         x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+        
+    #==============================================================================
+    # compute spectra
+    freqs, amplitudes = compute_spectrum(X, tstep * dt, args.power)
+        
+    if args.power:
+        plotLabel = 'power'
+        plotParams['freq_title'] = 'Mean Power Spectrum'
+        plotParams['freq_ylabel'] = 'Power'
+    else:
+        plotLabel = 'amplitude'
+        plotParams['freq_title'] = 'Mean Amplitude Spectrum'
+        plotParams['freq_ylabel'] = 'Amplitude'
+            
+    if args.data or all(v is not True for v in [args.data, args.testfunc]):
+        plotParams['freq_title'] += ' [' + plotParams['data_title'] + ']'
+    elif args.testfunc:
+        plotParams['freq_title'] += ' [' + plotParams['tf_title'] + 's]'
+        
+    if args.fmin is not None: 
+        if args.fmin >= 0:
+            if args.fmax is not None:
+                if args.fmax > args.fmin:
+                    plotParams['fmin'] = args.fmin
                     plotParams['fmax'] = args.fmax
                 else:
                     sys.exit(textwrap.dedent(
                             '''
-                            RelationError: The specified maximum frequency of the %s spectrum 
-                            plot must be greater than the minimum frequency.
-                            ''' %(plotLabel)))
-                        
-        #===================================================================================
-        if args.fu is not None:
-            plotParams['fu'] = args.fu
-            
-        if args.mode is not None:
-            plotParams['view_mode'] = args.mode
-        
-    else: # create a plotParams dictionary file with default values
-        plotParams = default_params()
-        
-        if args.power:
-            plotLabel = 'power'
-            plotParams['freq_title'] = 'Mean Power Spectrum'
-            plotParams['freq_ylabel'] = 'Power'
-        else:
-            plotLabel = 'amplitude'
-            plotParams['freq_title'] = 'Mean Amplitude Spectrum'
-            plotParams['freq_ylabel'] = 'Amplitude'
-        
-        if args.fmin is not None: 
-            if args.fmin >= 0:
-                if args.fmax is not None:
-                    if args.fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                        plotParams['fmax'] = args.fmax
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The maximum frequency of the %s spectrum plot must
-                                be greater than the mininum frequency.
-                                ''' %(plotLabel)))   
+                            RelationError: The maximum frequency of the %s spectrum plot must
+                            be greater than the mininum frequency.
+                            ''' %(plotLabel)))   
+            else:
+                fmax = plotParams['fmax']
+                if fmax > args.fmin:
+                    plotParams['fmin'] = args.fmin
                 else:
-                    fmax = np.max(freqs)
-                    plotParams['fmax'] = fmax
-                    if fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The specified minimum frequency of the %s spectrum 
-                                plot must be less than the maximum frequency.
-                                ''' %(plotLabel)))                                        
+                    sys.exit(textwrap.dedent(
+                            '''
+                            RelationError: The specified minimum frequency of the %s spectrum 
+                            plot must be less than the maximum frequency.
+                            ''' %(plotLabel)))                                        
+        else:
+            sys.exit(textwrap.dedent(
+                    '''
+                    ValueError: The specified minimum frequency of the %s spectrum 
+                    plot must be nonnegative.
+                    ''' %(plotLabel)))
+            
+    #===============================================================================
+    if args.fmax is not None:
+        if args.fmin is not None:
+            if args.fmin >= 0:
+                if args.fmax > args.fmin:
+                    plotParams['fmin'] = args.fmin
+                    plotParams['fmax'] = args.fmax
+                else:
+                    sys.exit(textwrap.dedent(
+                            '''
+                            RelationError: The maximum frequency of the %s spectrum plot must
+                            be greater than the mininum frequency.
+                            ''' %(plotLabel)))
             else:
                 sys.exit(textwrap.dedent(
                         '''
                         ValueError: The specified minimum frequency of the %s spectrum 
                         plot must be nonnegative.
                         ''' %(plotLabel)))
-            
-        #===============================================================================
-        if args.fmax is not None:
-            if args.fmin is not None:
-                if args.fmin >= 0:
-                    if args.fmax > args.fmin:
-                        plotParams['fmin'] = args.fmin
-                        plotParams['fmax'] = args.fmax
-                    else:
-                        sys.exit(textwrap.dedent(
-                                '''
-                                RelationError: The maximum frequency of the %s spectrum plot must
-                                be greater than the mininum frequency.
-                                ''' %(plotLabel)))
-                else:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            ValueError: The specified minimum frequency of the %s spectrum 
-                            plot must be nonnegative.
-                            ''' %(plotLabel)))
-            else:
-                fmin = plotParams['fmin']
-                if args.fmax > fmin:
-                    plotParams['fmin'] = args.fmin
-                else:
-                    sys.exit(textwrap.dedent(
-                            '''
-                            RelationError: The specified maximum frequency of the %s spectrum 
-                            plot must be greater than the minimum frequency.
-                            ''' %(plotLabel)))                                        
         else:
-            plotParams['fmax'] = np.max(freqs)
-                        
-        #===================================================================================
-        
-        # update units
-        if args.fu is not None:
-            plotParams['fu'] = args.fu
+            fmin = plotParams['fmin']
+            if args.fmax > fmin:
+                plotParams['fmax'] = args.fmax
+            else:
+                sys.exit(textwrap.dedent(
+                        '''
+                        RelationError: The specified maximum frequency of the %s spectrum 
+                        plot must be greater than the minimum frequency.
+                        ''' %(plotLabel)))
+    elif plotParams['fmax'] is None:
+        plotParams['fmax'] = np.max(freqs)
+                
+    #===================================================================================
+    if args.fu is not None:
+        plotParams['fu'] = args.fu
             
-        if args.mode is not None:
-            plotParams['view_mode'] = args.mode
+    if args.mode is not None:
+        plotParams['view_mode'] = args.mode
     
     pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)
-    
     
     fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'])
     ax.plot(freqs, amplitudes, color=ax.linecolor, linewidth=ax.linewidth)
