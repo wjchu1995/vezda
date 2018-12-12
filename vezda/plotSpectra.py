@@ -128,18 +128,20 @@ def cli():
                   Detected that band-limited noise has been added to the data array.
                   Would you like to plot the amplitude/power spectrum of the noisy data? ([y]/n)
               
-                 Enter 'q/quit' exit the program.
-                 '''))
+                  Enter 'q/quit' exit the program.
+                  '''))
             while userResponded == False:
                 answer = input('Action: ')
                 if answer == '' or answer == 'y' or answer == 'yes':
                     print('Proceeding with noisy data...')
                     # read in the noisy data array
+                    noisy = True
                     X = np.load('noisyData.npz')['noisyData']
                     userResponded = True
                 elif answer == 'n' or answer == 'no':
                     print('Proceeding with noise-free data...')
                     # read in the recorded data array
+                    noisy = False
                     X  = np.load(str(datadir['recordedData']))
                     userResponded = True
                 elif answer == 'q' or answer == 'quit':
@@ -149,6 +151,7 @@ def cli():
                 
         else:
             # read in the recorded data array
+            noisy = False
             X = np.load(str(datadir['recordedData']))
     
         # Load the windowing parameters for the receiver and time axes of
@@ -249,9 +252,9 @@ def cli():
                 if tau[0] != 0:
                     tu = plotParams['tu']
                     if tu != '':
-                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                     else:
-                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
                     X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
                                                   x, y, z, pulse)
                 else:
@@ -272,9 +275,9 @@ def cli():
             print('\nComputing free-space test functions for the current space-time sampling grid...')
             if tau[0] != 0:
                 if tu != '':
-                    print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                    print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                 else:
-                    print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                    print('Computing test functions for focusing time %0.2f...' %(tau[0]))
                 X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
                                               x, y, z, pulse)
             else:
@@ -304,7 +307,10 @@ def cli():
         plotParams['freq_ylabel'] = 'Amplitude'
             
     if args.data or all(v is not True for v in [args.data, args.testfunc]):
-        plotParams['freq_title'] += ' [' + plotParams['data_title'] + ']'
+        if noisy:
+            plotParams['freq_title'] += ' [Noisy ' + plotParams['data_title'] + ']'
+        else:
+            plotParams['freq_title'] += ' [' + plotParams['data_title'] + ']'
     elif args.testfunc:
         plotParams['freq_title'] += ' [' + plotParams['tf_title'] + 's]'
         

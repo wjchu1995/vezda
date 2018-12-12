@@ -614,9 +614,9 @@ def cli():
                     
                     if tau[0] != 0:
                         if tu != '':
-                            print('Shifting test functions to lag time %0.2f %s...' %(tau[0], tu))
+                            print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                         else:
-                            print('Shifting test functions to lag time %0.2f...' %(tau[0]))
+                            print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
                         X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes - tau[0], velocity,
                                                       x, y, z, pulse)
                     else:
@@ -637,9 +637,9 @@ def cli():
                 print('\nComputing free-space test functions for the current space-time sampling grid...')
                 if tau[0] != 0:
                     if tu != '':
-                        print('Shifting test functions to source time %0.2f %s...' %(tau[0], tu))
+                        print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                     else:
-                        print('Shifting test functions to source time %0.2f...' %(tau[0]))
+                        print('Computing test functions for focusing time %0.2f...' %(tau[0]))
                     X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
                                                   x, y, z, pulse)
                 else:
@@ -840,7 +840,7 @@ def cli():
             ax_lvec_i.volume = U.imag
             ax_lvec_r.index = 0
             ax_lvec_i.index = 0
-            fig_lvec.suptitle('Left Singular Vector', color=ax_lvec_r.titlecolor, fontsize=16)
+            fig_lvec.suptitle('Left-Singular Vector', color=ax_lvec_r.titlecolor, fontsize=16)
             fig_lvec.subplots_adjust(bottom=0.27, top=0.86)
             leftTitle_r = vector_title('left', ax_lvec_r.index + 1, 'real')
             leftTitle_i = vector_title('left', ax_lvec_i.index + 1, 'imag')
@@ -867,7 +867,7 @@ def cli():
             ax_rvec_i.volume = V.imag
             ax_rvec_r.index = 0
             ax_rvec_i.index = 0
-            fig_rvec.suptitle('Right Singular Vector', color=ax_rvec_r.titlecolor, fontsize=16)
+            fig_rvec.suptitle('Right-Singular Vector', color=ax_rvec_r.titlecolor, fontsize=16)
             fig_rvec.subplots_adjust(bottom=0.27, top=0.86)
             rightTitle_r = vector_title('right', ax_rvec_r.index + 1, 'real')
             rightTitle_i = vector_title('right', ax_rvec_i.index + 1, 'imag')

@@ -173,7 +173,7 @@ def solver(medium, s, Uh, V, alpha, domain):
                         if tu != '':
                             print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                         else:
-                            print('Recomputing test functions for source time %0.2f...' %(tau[0]))
+                            print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
                         TFarray, samplingPoints = sampleSpace(receiverPoints, times - tau[0], velocity,
                                                               x, y, z, pulse)
                     else:
@@ -192,7 +192,7 @@ def solver(medium, s, Uh, V, alpha, domain):
                     if tu != '':
                         print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
                     else:
-                        print('Shifting test functions for focusing time %0.2f...' %(tau[0]))
+                        print('Computing test functions for focusing time %0.2f...' %(tau[0]))
                     TFarray, samplingPoints = sampleSpace(receiverPoints, times - tau[0], velocity,
                                                           x, y, z, pulse)
                 else:

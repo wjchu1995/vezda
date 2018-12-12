@@ -1064,7 +1064,7 @@ def vector_title(flag, n, cmplx_part=None):
         elif cmplx_part == 'imag':
             title = r'$\Im\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
         else:
-            title = r'Left Singular Vector $\phi_{%d}(\mathbf{x}_r,t)$' %(n)
+            title = r'Left-Singular Vector $\phi_{%d}(\mathbf{x}_r,t)$' %(n)
             
     
     elif flag == 'right':
@@ -1073,7 +1073,7 @@ def vector_title(flag, n, cmplx_part=None):
         elif cmplx_part == 'imag':
             title = r'$\Im\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
         else:
-            title = r'Right Singular Vector $\psi_{%d}(\mathbf{x}_s,t)$' %(n)
+            title = r'Right-Singular Vector $\psi_{%d}(\mathbf{x}_s,t)$' %(n)
     
     return title
           
@@ -1102,11 +1102,11 @@ def process_key_vectors(event, xvals, xmin, xmax, pltrstart, pltsstart,
     
     if event.key == 'left' or event.key == 'down':
         if dtype == 'cmplx_left':
-            fig.suptitle('Left Singular Vector', color=ax1.titlecolor, fontsize=16)
+            fig.suptitle('Left-Singular Vector', color=ax1.titlecolor, fontsize=16)
             previous_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
             previous_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
         elif dtype == 'cmplx_right':
-            fig.suptitle('Right Singular Vector', color=ax1.titlecolor, fontsize=16)
+            fig.suptitle('Right-Singular Vector', color=ax1.titlecolor, fontsize=16)
             previous_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
             previous_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
         else:
@@ -1115,11 +1115,11 @@ def process_key_vectors(event, xvals, xmin, xmax, pltrstart, pltsstart,
     
     elif event.key == 'right' or event.key == 'up':
         if dtype == 'cmplx_left':
-            fig.suptitle('Left Singular Vector', color=ax1.titlecolor, fontsize=16)
+            fig.suptitle('Left-Singular Vector', color=ax1.titlecolor, fontsize=16)
             next_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
             next_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
         elif dtype == 'cmplx_right':
-            fig.suptitle('Right Singular Vector', color=ax1.titlecolor, fontsize=16)
+            fig.suptitle('Right-Singular Vector', color=ax1.titlecolor, fontsize=16)
             next_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
             next_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
         else:
