@@ -14,7 +14,7 @@ if sys.version_info <= (2,7):
              ''')
 
 setup(name = 'vezda',
-      version = '0.5.2',
+      version = '0.5.3',
       description = 'A set of command-line tools for imaging with linear sampling methods',
       python_requires = '>=3',
       classifiers = [
