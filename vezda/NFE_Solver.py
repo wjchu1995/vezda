@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ import os
 import sys
 import textwrap
 import numpy as np
-from vezda.Tikhonov import Tikhonov
 from vezda.sampling_utils import samplingIsCurrent, sampleSpace
 from vezda.math_utils import nextPow2
 from vezda.plot_utils import default_params
@@ -33,7 +32,7 @@ import pickle
 sys.path.append(os.getcwd())
 import pulseFun
 
-def solver(medium, s, Uh, V, alpha, domain):
+def solve(medium, V, Sp, Uh, alpha, domain):
     
     #==============================================================================
     # Load the receiver coordinates and recording times from the data directory
@@ -140,16 +139,12 @@ def solver(medium, s, Uh, V, alpha, domain):
         Ny = len(y)
         X, Y = np.meshgrid(x, y, indexing='ij')
         
-        # Initialize the Histogram for storing images at each sampling point in time.
-        # Initialize the Image (time-integrated Histogram with respect to L2 norm)
+        # Initialize the Image
         Image = np.zeros(X.shape)
         
         if medium == 'constant':
             # Vezda will compute free-space test functions over the space-time
-            # sampling grid via function calls to 'FundamentalSolutions.py'. This is
-            # much more efficient than applying a forward and inverse FFT pair to
-            # shift the test functions in time corresponding to different sampling
-            # points in time. FFT pairs are only used when medium == variable.
+            # sampling grid via function calls to 'FundamentalSolutions.py'.
             pulse = lambda t : pulseFun.pulse(t)
             
             # Previously computed test functions and parameters from pulseFun module
@@ -222,9 +217,9 @@ def solver(medium, s, Uh, V, alpha, domain):
                 fu = plotParams['fu']   # frequency units (e.g., Hz)
                 
                 if fu != '':
-                    print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                    print('Applying frequency window: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
                 else:
-                    print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+                    print('Applying frequency window: [%0.2f, %0.2f]' %(fmin, fmax))
             
                 df = 1.0 / (N * tstep * dt)
                 startIndex = int(round(fmin / df))
@@ -237,17 +232,17 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
             #==============================================================================
             # Solve the near-field equation for each sampling point
-            print('Localizing the source...')
+            print('Localizing the source function...')
             # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
             # 'tf' is a test function
             # 'alpha' is the regularization parameter
             # 'phi_alpha' is the regularized solution given 'alpha'
                 
             k = 0 # counter for spatial sampling points
-            for ix in trange(Nx, desc='Solving system'):
+            for ix in trange(Nx):
                 for iy in range(Ny):
                     tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                    phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                    phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                     Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                     k += 1
                 
@@ -284,9 +279,9 @@ def solver(medium, s, Uh, V, alpha, domain):
                     fu = plotParams['fu']   # frequency units (e.g., Hz)
                 
                     if fu != '':
-                        print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                        print('Applying frequency window: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
                     else:
-                        print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+                        print('Applying frequency window: [%0.2f, %0.2f]' %(fmin, fmax))
             
                     df = 1.0 / (N * tstep * dt)
                     startIndex = int(round(fmin / df))
@@ -296,9 +291,6 @@ def solver(medium, s, Uh, V, alpha, domain):
                     TFarray = TFarray[:, finterval, :]
                 
                 N = TFarray.shape[1]
-                
-                # Load the sampling points
-                samplingPoints = np.load(str(datadir['samplingPoints']))
             
             else:
                 sys.exit(textwrap.dedent(
@@ -327,17 +319,17 @@ def solver(medium, s, Uh, V, alpha, domain):
                 order = input('Order: ')
                 if order == '' or order == 'xy':
                     print('Proceeding with order \'xy\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for ix in trange(Nx, desc='Solving system'):
+                    for ix in trange(Nx):
                         for iy in range(Ny):
                             tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                            phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                            phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                             Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                             k += 1
                 
@@ -349,17 +341,17 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'yx':
                     print('Proceeding with order \'yx\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for iy in trange(Ny, desc='Solving system'):
+                    for iy in trange(Ny):
                         for ix in range(Nx):
                             tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                            phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                            phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                             Image[ix, iy] = 1.0 / (norm(phi_alpha) + eps)
                             k += 1
                 
@@ -401,8 +393,7 @@ def solver(medium, s, Uh, V, alpha, domain):
         Nz = len(z)
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
-        # Initialize the Histogram for storing images at each sampling point in time.
-        # Initialize the Image (time-integrated Histogram with respect to L2 norm)
+        # Initialize the Image
         Image = np.zeros(X.shape)
         
         if medium == 'constant':
@@ -486,9 +477,9 @@ def solver(medium, s, Uh, V, alpha, domain):
                 fu = plotParams['fu']   # frequency units (e.g., Hz)
                 
                 if fu != '':
-                    print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                    print('Applying frequency window: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
                 else:
-                    print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+                    print('Applying frequency window: [%0.2f, %0.2f]' %(fmin, fmax))
             
                 df = 1.0 / (N * tstep * dt)
                 startIndex = int(round(fmin / df))
@@ -500,18 +491,18 @@ def solver(medium, s, Uh, V, alpha, domain):
             N = TFarray.shape[1]
             #==============================================================================
             # Solve the near-field equation for each sampling point
-            print('Localizing the source...')
+            print('Localizing the source function...')
             # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
             # 'tf' is a test function
             # 'alpha' is the regularization parameter
             # 'phi_alpha' is the regularized solution given 'alpha'
                 
             k = 0 # counter for spatial sampling points
-            for ix in trange(Nx, desc='Solving system'):
+            for ix in trange(Nx):
                 for iy in range(Ny):
                     for iz in range(Nz):
                         tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                        phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                        phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                         Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                         k += 1
                 
@@ -548,9 +539,9 @@ def solver(medium, s, Uh, V, alpha, domain):
                     fu = plotParams['fu']   # frequency units (e.g., Hz)
                 
                     if fu != '':
-                        print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+                        print('Applying frequency window: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
                     else:
-                        print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+                        print('Applying frequency window: [%0.2f, %0.2f]' %(fmin, fmax))
             
                     df = 1.0 / (N * tstep * dt)
                     startIndex = int(round(fmin / df))
@@ -560,9 +551,6 @@ def solver(medium, s, Uh, V, alpha, domain):
                     TFarray = TFarray[:, finterval, :]
                 
                 N = TFarray.shape[1]
-                
-                # Load the sampling points
-                samplingPoints = np.load(str(datadir['samplingPoints']))
             
             else:
                 sys.exit(textwrap.dedent(
@@ -595,18 +583,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 order = input('Order: ')
                 if order == '' or order == 'xyz':
                     print('Proceeding with order \'xyz\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for ix in trange(Nx, desc='Solving system'):
+                    for ix in trange(Nx):
                         for iy in range(Ny):
                             for iz in range(Nz):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 
@@ -618,18 +606,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'xzy':
                     print('Proceeding with order \'xzy\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for ix in trange(Nx, desc='Solving system'):
+                    for ix in trange(Nx):
                         for iz in range(Nz):
                             for iy in range(Ny):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 
@@ -641,18 +629,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'yxz':
                     print('Proceeding with order \'yxz\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for iy in trange(Ny, desc='Solving system'):
+                    for iy in trange(Ny):
                         for ix in range(Nx):
                             for iz in range(Nz):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 
@@ -664,18 +652,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'yzx':
                     print('Proceeding with order \'yzx\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for iy in trange(Ny, desc='Solving system'):
+                    for iy in trange(Ny):
                         for iz in range(Nz):
                             for ix in range(Nx):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 
@@ -687,18 +675,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'zxy':
                     print('Proceeding with order \'zxy\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for iz in trange(Nz, desc='Solving system'):
+                    for iz in trange(Nz):
                         for ix in range(Nx):
                             for iy in range(Ny):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 
@@ -710,18 +698,18 @@ def solver(medium, s, Uh, V, alpha, domain):
                 
                 elif order == 'zyx':
                     print('Proceeding with order \'zyx\'...')
-                    print('Localizing the source...')
+                    print('Localizing the source function...')
                     # Compute the Tikhonov-regularized solution to the near-field equation N * phi = tf.
                     # 'tf' is a test function
                     # 'alpha' is the regularization parameter
                     # 'phi_alpha' is the regularized solution given 'alpha'
                         
                     k = 0 # counter for spatial sampling points
-                    for iz in trange(Nz, desc='Solving system'):
+                    for iz in trange(Nz):
                         for iy in range(Ny):
                             for ix in range(Nx):
                                 tf = np.reshape(TFarray[:, :, k], (N * Nr, 1))
-                                phi_alpha = Tikhonov(Uh, s, V, tf, alpha)
+                                phi_alpha = V.dot(Sp.dot(Uh.dot(tf)))
                                 Image[ix, iy, iz] = 1.0 / (norm(phi_alpha) + eps)
                                 k += 1
                 

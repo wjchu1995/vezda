@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,6 +23,19 @@ from pathlib import Path
 from tqdm import trange
 
 #==============================================================================
+# Define color class for printing to terminal
+class FontColor:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
+
 # General functions for plotting...
 
 customCmapL = matplotlib.colors.LinearSegmentedColormap.from_list('', ['cyan', 'whitesmoke', 'magenta'])
@@ -1060,18 +1073,18 @@ def vector_title(flag, n, cmplx_part=None):
     
     if flag == 'left':
         if cmplx_part == 'real':
-            title = r'$\Re\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
+            title = r'$\mathrm{Re}\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
         elif cmplx_part == 'imag':
-            title = r'$\Im\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
+            title = r'$\mathrm{Im}\{\widehat{\phi}_{%d}(\mathbf{x}_r,\nu)\}$' %(n)
         else:
             title = r'Left-Singular Vector $\phi_{%d}(\mathbf{x}_r,t)$' %(n)
             
     
     elif flag == 'right':
         if cmplx_part == 'real':
-            title = r'$\Re\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
+            title = r'$\mathrm{Re}\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
         elif cmplx_part == 'imag':
-            title = r'$\Im\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
+            title = r'$\mathrm{Im}\{\widehat{\psi}_{%d}(\mathbf{x}_s,\nu)\}$' %(n)
         else:
             title = r'Right-Singular Vector $\psi_{%d}(\mathbf{x}_s,t)$' %(n)
     

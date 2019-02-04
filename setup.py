@@ -3,7 +3,6 @@
 
 import sys
 from setuptools import setup, find_packages
-import textwrap
 
 if sys.version_info <= (2,7):
     sys.exit('''
@@ -14,7 +13,7 @@ if sys.version_info <= (2,7):
              ''')
 
 setup(name = 'vezda',
-      version = '0.5.3',
+      version = '0.6.0',
       description = 'A set of command-line tools for imaging with linear sampling methods',
       python_requires = '>=3',
       classifiers = [
@@ -46,7 +45,7 @@ setup(name = 'vezda',
               'console_scripts': [
                       'vzdata = vezda.setDataPath:cli',
                       'vzgrid = vezda.setSamplingGrid:cli',
-                      'vzhome = vezda.home:cli',
+                      'vezda = vezda.home:cli',
                       'vzimage = vezda.plotImage:cli',
                       'vznoise = vezda.addNoise:cli',
                       'vzpicard = vezda.Picard:cli',

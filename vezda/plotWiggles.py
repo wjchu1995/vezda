@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,13 @@ from vezda.sampling_utils import samplingIsCurrent, sampleSpace
 
 sys.path.append(os.getcwd())
 import pulseFun
+from vezda.plot_utils import FontColor
+
+def info():
+    commandName = FontColor.BOLD + 'vzwiggles:' + FontColor.END
+    description = ' plot time signals as waveforms'
+    
+    return commandName + description
 
 def cli():
     parser = argparse.ArgumentParser()
@@ -262,9 +269,12 @@ def cli():
         wiggleType = 'testfunc'
         if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
             X = np.load(str(datadir['testFuncs']))
-            time = np.load(str(datadir['convolutionTimes']))
-            sourcePoints = np.load(str(datadir['samplingPoints']))            
+            T = recordingTimes[-1] - recordingTimes[0]
+            time = np.linspace(-T, T, 2 * len(recordingTimes) - 1)
+            sourcePoints = np.load(str(datadir['samplingPoints']))     
             X = X[rinterval, :, :]
+            npad = ((0, 0), (len(recordingTimes) - 1, 0), (0, 0))
+            X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)
         
         elif not 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
             print('\nDetected that free-space test functions have already been computed...')
@@ -333,9 +343,12 @@ def cli():
                 
                 if answer == '' or answer == '1':
                     X = np.load(str(datadir['testFuncs']))
-                    time = np.load(str(datadir['convolutionTimes']))
-                    sourcePoints = np.load(str(datadir['samplingPoints']))
-                    X = X[rinterval, :, :]                    
+                    T = recordingTimes[-1] - recordingTimes[0]
+                    time = np.linspace(-T, T, 2 * len(recordingTimes) - 1)
+                    sourcePoints = np.load(str(datadir['samplingPoints']))     
+                    X = X[rinterval, :, :]
+                    npad = ((0, 0), (len(recordingTimes) - 1, 0), (0, 0))
+                    X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)                   
                     userResponded = True
                     break
                 

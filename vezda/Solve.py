@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,15 @@ import argparse
 import textwrap
 import vezda.NFE_Solver
 import vezda.LSE_Solver
+from scipy.sparse import diags
+from vezda.math_utils import loadSVD
+from vezda.plot_utils import FontColor
+
+def info():
+    commandName = FontColor.BOLD + 'vzsolve:' + FontColor.END
+    description = ' solve for the unknown source function to obtain an image'
+    
+    return commandName + description
 
 def cli():
     parser = argparse.ArgumentParser()
@@ -54,13 +63,20 @@ def cli():
         # Left vectors are columns of U
         # Right vectors are columns of V
         
-        SVD = np.load('NFO_SVD.npz')
-        s = SVD['s']
-        Uh = SVD['Uh']
-        V = SVD['V']
-        domain = SVD['domain']
+        U, s, Vh, domain = loadSVD('NFO_SVD.npz')
         
-        vezda.NFE_Solver.solver(args.medium, s, Uh, V, alpha, domain)
+        if domain == 'freq':
+            Uh = U.getH()
+            V = Vh.getH()
+        elif domain == 'time':
+            Uh = U.T
+            V = Vh.T
+        
+        # Construct the pseudoinverse 'Sp' of the diagonal matrix 'S'
+        s = np.divide(s, alpha + s**2)
+        Sp = diags(s)
+        
+        vezda.NFE_Solver.solve(args.medium, V, Sp, Uh, alpha, domain)
     
     elif args.lse:
         # Solve the Lippmann-Schwinger equation
@@ -69,13 +85,20 @@ def cli():
         # Left vectors are columns of U
         # Right vectors are columns of V
         
-        SVD = np.load('LSO_SVD.npz')
-        s = SVD['s']
-        Uh = SVD['Uh']
-        V = SVD['V']
-        domain = SVD['domain']
+        U, s, Vh, domain = loadSVD('LSO_SVD.npz')
         
-        vezda.LSE_Solver.solver(s, Uh, V, alpha, domain)
+        if domain == 'freq':
+            Uh = U.getH()
+            V = Vh.getH()
+        elif domain == 'time':
+            Uh = U.T
+            V = Vh.T
+        
+        # Construct the pseudoinverse 'Sp' of the diagonal matrix 'S'
+        s = np.divide(s, alpha + s**2)
+        Sp = diags(s)
+        
+        vezda.LSE_Solver.solve(V, Sp, Uh, alpha, domain)
         
     else:
         sys.exit(textwrap.dedent(

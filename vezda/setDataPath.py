@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,13 @@ import argparse
 import textwrap
 import numpy as np
 from pathlib import Path
+from vezda.plot_utils import FontColor
+
+def info():
+    commandName = FontColor.BOLD + 'vzdata:' + FontColor.END
+    description = ' specify the directory containing the experimental data'
+    
+    return commandName + description
 
 def cli():
     parser = argparse.ArgumentParser()

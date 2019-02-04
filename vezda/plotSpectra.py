@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,6 +28,13 @@ import pickle
 
 sys.path.append(os.getcwd())
 import pulseFun
+from vezda.plot_utils import FontColor
+
+def info():
+    commandName = FontColor.BOLD + 'vzspectra:' + FontColor.END
+    description = ' plot the amplitude or power spectrum of time signals in the frequency domain'
+    
+    return commandName + description
 
 def cli():
     parser = argparse.ArgumentParser()
@@ -210,88 +217,137 @@ def cli():
             X *= TukeyWindow[None, :, None]
         
     elif not args.data and args.testfunc:
-        if Path('samplingGrid.npz').exists():
-            samplingGrid = np.load('samplingGrid.npz')
-            x = samplingGrid['x']
-            y = samplingGrid['y']
-            tau = samplingGrid['tau']
-            if 'z' in samplingGrid:
-                z = samplingGrid['z']
-            else:
-                z = None
-                    
-        else:
-            sys.exit(textwrap.dedent(
-                    '''
-                    A sampling grid needs to be set up and test functions
-                    computed before their Fourier spectrum can be plotted.
-                    Enter:
-                        
-                        vzgrid --help
-                        
-                    from the command-line for more information on how to set up a
-                    sampling grid.
-                    '''))
+        
+        if 'testFuncs' in datadir:
+            print('Loading user-provided test functions...')
+            X = np.load(str(datadir['testFuncs']))
             
-        pulse = lambda t : pulseFun.pulse(t)
-        velocity = pulseFun.velocity
-        peakFreq = pulseFun.peakFreq
-        peakTime = pulseFun.peakTime
-            
-        if Path('VZTestFuncs.npz').exists():
-            print('\nDetected that free-space test functions have already been computed...')
-            print('Checking consistency with current space-time sampling grid...')
-            TFDict = np.load('VZTestFuncs.npz')
+            # Load the windowing parameters for the receiver and time axes of
+            # the 3D data array
+            if Path('window.npz').exists():
+                print('Detected user-specified window:\n')
                 
-            if samplingIsCurrent(TFDict, receiverPoints, recordingTimes, velocity, tau, x, y, z, peakFreq, peakTime):
-                X = TFDict['TFarray']
-                sourcePoints = TFDict['samplingPoints']
+                # For display/printing purposes, count receivers with one-based
+                # indexing. This amounts to incrementing the rstart parameter by 1
+                print('window @ receivers : start =', rstart + 1)
+                print('window @ receivers : stop =', rstop)
+                print('window @ receivers : step =', rstep, '\n')
+            
+                tu = plotParams['tu']
+                if tu != '':
+                    print('window @ time : start = %0.2f %s' %(tstart, tu))
+                    print('window @ time : stop = %0.2f %s' %(tstop, tu))
+                else:
+                    print('window @ time : start =', tstart)
+                    print('window @ time : stop =', tstop)
+                print('window @ time : step =', tstep, '\n')
+                
+                print('Applying window to data volume...')
+                X = X[rinterval, :, :]
+                X = X[:, tinterval, :]
+            
+                # Apply tapered cosine (Tukey) window to time signals.
+                # This ensures the fast fourier transform (FFT) used in
+                # the definition of the matrix-vector product below is
+                # acting on a function that is continuous at its edges.
+                
+                Nt = X.shape[1]
+                peakFreq = pulseFun.peakFreq
+                # Np : Number of samples in the dominant period T = 1 / peakFreq
+                Np = int(round(1 / (tstep * dt * peakFreq)))
+                # alpha is set to taper over 6 of the dominant period of the
+                # pulse function (3 periods from each end of the signal)
+                alpha = 6 * Np / Nt
+                print('Tapering time signals with Tukey window: %d'
+                      %(int(round(alpha * 100))) + '%')
+                TukeyWindow = tukey(Nt, alpha)
+                X *= TukeyWindow[None, :, None]
+            
+        else:
+            if Path('samplingGrid.npz').exists():
+                samplingGrid = np.load('samplingGrid.npz')
+                x = samplingGrid['x']
+                y = samplingGrid['y']
+                tau = samplingGrid['tau']
+                if 'z' in samplingGrid:
+                    z = samplingGrid['z']
+                else:
+                    z = None
                     
             else:
-                print('Recomputing test functions...')
-                if tau[0] != 0:
-                    tu = plotParams['tu']
-                    if tu != '':
-                        print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
-                    else:
-                        print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
-                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
-                                                  x, y, z, pulse)
+                sys.exit(textwrap.dedent(
+                        '''
+                        A sampling grid needs to be set up and test functions
+                        computed before their Fourier spectrum can be plotted.
+                        Enter:
+                            
+                            vzgrid --help
+                            
+                        from the command-line for more information on how to set up a
+                        sampling grid.
+                        '''))
+            
+            pulse = lambda t : pulseFun.pulse(t)
+            velocity = pulseFun.velocity
+            peakFreq = pulseFun.peakFreq
+            peakTime = pulseFun.peakTime
+        
+            # set up the convolution times based on length of recording time interval
+            T = recordingTimes[-1] - recordingTimes[0]
+            convolutionTimes = np.linspace(-T, T, 2 * len(recordingTimes) - 1)    
+            if Path('VZTestFuncs.npz').exists():
+                print('\nDetected that free-space test functions have already been computed...')
+                print('Checking consistency with current space-time sampling grid...')
+                TFDict = np.load('VZTestFuncs.npz')
+                
+                if samplingIsCurrent(TFDict, receiverPoints, convolutionTimes, velocity, tau, x, y, z, peakFreq, peakTime):
+                    X = TFDict['TFarray']
+                    
                 else:
-                    X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
+                    print('Recomputing test functions...')
+                    if tau[0] != 0:
+                        tu = plotParams['tu']
+                        if tu != '':
+                            print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
+                        else:
+                            print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
+                            X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes - tau[0], velocity,
+                                                          x, y, z, pulse)
+                    else:
+                        X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes, velocity,
+                                                      x, y, z, pulse)
+                    
+                    
+                    if z is None:
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=convolutionTimes, receivers=receiverPoints,
+                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                 x=x, y=y, tau=tau, samplingPoints=sourcePoints)
+                    else:
+                        np.savez('VZTestFuncs.npz', TFarray=X, time=convolutionTimes, receivers=receiverPoints,
+                                 peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
+                                 x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+                    
+            else:                
+                print('\nComputing free-space test functions for the current space-time sampling grid...')
+                if tau[0] != 0:
+                    if tu != '':
+                        print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
+                    else:
+                        print('Computing test functions for focusing time %0.2f...' %(tau[0]))
+                        X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes - tau[0], velocity,
+                                                      x, y, z, pulse)
+                else:
+                    X, sourcePoints = sampleSpace(receiverPoints, convolutionTimes, velocity,
                                                   x, y, z, pulse)
-                    
-                    
+                
                 if z is None:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=convolutionTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, tau=tau, samplingPoints=sourcePoints)
                 else:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
+                    np.savez('VZTestFuncs.npz', TFarray=X, time=convolutionTimes, receivers=receiverPoints,
                              peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
                              x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
-                    
-        else:                
-            print('\nComputing free-space test functions for the current space-time sampling grid...')
-            if tau[0] != 0:
-                if tu != '':
-                    print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
-                else:
-                    print('Computing test functions for focusing time %0.2f...' %(tau[0]))
-                X, sourcePoints = sampleSpace(receiverPoints, recordingTimes - tau[0], velocity,
-                                              x, y, z, pulse)
-            else:
-                X, sourcePoints = sampleSpace(receiverPoints, recordingTimes, velocity,
-                                              x, y, z, pulse)
-                
-            if z is None:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
-                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                         x=x, y=y, tau=tau, samplingPoints=sourcePoints)
-            else:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=recordingTimes, receivers=receiverPoints,
-                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                         x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
         
     #==============================================================================
     # compute spectra

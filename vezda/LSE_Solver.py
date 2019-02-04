@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,18 +13,22 @@
 # limitations under the License.
 #==============================================================================
 
+import os
 import sys
 import textwrap
 import numpy as np
-from vezda.Tikhonov import Tikhonov
 from vezda.math_utils import nextPow2
 from vezda.plot_utils import default_params
 from scipy.linalg import norm
+from scipy.signal import tukey
 from tqdm import trange
 from pathlib import Path
 import pickle
 
-def solver(s, Uh, V, alpha, domain):
+sys.path.append(os.getcwd())
+import pulseFun
+
+def solve(V, Sp, Uh, alpha, domain):
     
     #==============================================================================
     # Load the receiver coordinates and recording times from the data directory
@@ -81,32 +85,21 @@ def solver(s, Uh, V, alpha, domain):
         print('Detected user-specified window:\n')
         windowDict = np.load('window.npz')
         
-        # Time window parameters (with units of time)
-        tstart = windowDict['tstart']
-        tstop = windowDict['tstop']
-        
-        # Convert window parameters to corresponding array indices
-        tstart = int(round(tstart / dt))
-        tstop = int(round(tstop / dt))
-        tstep = windowDict['tstep']
-        
         # Receiver window parameters
         rstart = windowDict['rstart']
         rstop = windowDict['rstop']
         rstep = windowDict['rstep']
         
-        # Source window parameters
-        slabel = windowDict['slabel']
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
-                
         # For display/printing purposes, count receivers with one-based
         # indexing. This amounts to incrementing the rstart parameter by 1
         print('window @ receivers : start =', rstart + 1)
         print('window @ receivers : stop =', rstop)
         print('window @ receivers : step =', rstep, '\n')
-                
+        
+        # Time window parameters (with units of time)
+        tstart = windowDict['tstart']
+        tstop = windowDict['tstop']
+        tstep = windowDict['tstep']
         tu = plotParams['tu']
         if tu != '':
             print('window @ time : start = %0.2f %s' %(tstart, tu))
@@ -115,13 +108,16 @@ def solver(s, Uh, V, alpha, domain):
             print('window @ time : start =', tstart)
             print('window @ time : stop =', tstop)
         print('window @ time : step =', tstep, '\n')
-                
-        # Apply the source window
+        
+        # Convert window parameters to corresponding array indices
+        tstart = int(round(tstart / dt))
+        tstop = int(round(tstop / dt))
+        
+        # Source window parameters
         slabel = windowDict['slabel']
         sstart = windowDict['sstart']
         sstop = windowDict['sstop']
         sstep = windowDict['sstep']
-        sinterval = np.arange(sstart, sstop, sstep)
                 
         # For display/printing purposes, count recordings/sources with one-based
         # indexing. This amounts to incrementing the sstart parameter by 1
@@ -146,10 +142,6 @@ def solver(s, Uh, V, alpha, domain):
         rstep = 1
         
         # Source window parameters
-        if sourcePoints is None:
-            slabel = 'records'
-        else:
-            slabel = 'sources'
         sstart = 0
         sstop = recordedData.shape[2]
         sstep = 1
@@ -172,8 +164,23 @@ def solver(s, Uh, V, alpha, domain):
     recordedData = recordedData[:, tinterval, :]
     recordedData = recordedData[:, :, sinterval]
     
-    Nr = receiverPoints.shape[0]
-    Ns = recordedData.shape[2]
+    Nr, Nt, Ns = recordedData.shape
+    
+    # Apply tapered cosine (Tukey) window to time signals.
+    # This ensures the fast fourier transform (FFT) used in
+    # the definition of the matrix-vector product below is
+    # acting on a function that is continuous at its edges.
+                
+    peakFreq = pulseFun.peakFreq
+    # Np : Number of samples in the dominant period T = 1 / peakFreq
+    Np = int(round(1 / (tstep * dt * peakFreq)))
+    # alpha is set to taper over 6 of the dominant period of the
+    # pulse function (3 periods from each end of the signal)
+    percent_taper = 6 * Np / Nt
+    print('Tapering time signals with Tukey window: %d'
+          %(int(round(percent_taper * 100))) + '%')
+    TukeyWindow = tukey(Nt, percent_taper)
+    recordedData *= TukeyWindow[None, :, None]
     
     #==============================================================================
     if domain == 'freq':
@@ -181,7 +188,7 @@ def solver(s, Uh, V, alpha, domain):
         # to Lippmann-Schwinger equation
         print('Transforming data to the frequency domain...')
     
-        N = nextPow2(2 * len(recordingTimes))
+        N = nextPow2(2 * Nt)
         recordedData = np.fft.rfft(recordedData, n=N, axis=1)
     
         if plotParams['fmax'] is None:
@@ -195,9 +202,9 @@ def solver(s, Uh, V, alpha, domain):
         fu = plotParams['fu']   # frequency units (e.g., Hz)
     
         if fu != '':
-            print('Applying bandpass filter: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
+            print('Applying frequency window: [%0.2f %s, %0.2f %s]' %(fmin, fu, fmax, fu))
         else:
-            print('Applying bandpass filter: [%0.2f, %0.2f]' %(fmin, fmax))
+            print('Applying frequency window: [%0.2f, %0.2f]' %(fmin, fmax))
         
         df = 1.0 / (N * tstep * dt)
         startIndex = int(round(fmin / df))
@@ -210,7 +217,7 @@ def solver(s, Uh, V, alpha, domain):
         # Pad data in the time domain to length 2*Nt-1 (length of circular convolution)
         # to solve Lippmann-Schwinger equation
     
-        N = len(recordingTimes) - 1
+        N = Nt - 1
         npad = ((0, 0), (N, 0), (0, 0))
         recordedData = np.pad(recordedData, pad_width=npad, mode='constant', constant_values=0)
     
@@ -248,45 +255,39 @@ def solver(s, Uh, V, alpha, domain):
         Ny = len(y)
         X, Y = np.meshgrid(x, y, indexing='ij')
         
-        # Initialize the Histogram for storing images at each sampling point in time.
-        # Initialize the Image (source-integrated Histogram with respect to L2 norm)
-        Histogram = np.zeros((Nx, Ny, Ns))
+        # Initialize the Image
         Image = np.zeros(X.shape)
         
-        print('Localizing the source...')
+        print('Localizing the source function...')
         if Ns == 1:
             # Compute the Tikhonov-regularized solution to the Lippmann-Schwinger equation L * chi = u.
             # 'u' is recorded data
             # 'alpha' is the regularization parameter
             # 'chi_alpha' is the regularized solution given 'alpha'
             data = np.reshape(recordedData, (N * Nr, 1))
-            print('Solving system...')
-            chi_alpha = Tikhonov(Uh, s, V, data, alpha)
+            chi_alpha = V.dot(Sp.dot(Uh.dot(data)))
             chi_alpha = np.reshape(chi_alpha, (Nx * Ny, N))
             
             Image = np.reshape(norm(chi_alpha, axis=1), X.shape)                
             Imin = np.min(Image)
             Imax = np.max(Image)
             Image = (Image - Imin) / (Imax - Imin + eps)
-            Histogram[:, :, 0] = Image
                 
         else:                
-            for i in trange(Ns, desc='Summing over %s' %(slabel)):
+            for i in trange(Ns):
                 data = np.reshape(recordedData[:, :, i], (N * Nr, 1))
-                chi_alpha = Tikhonov(Uh, s, V, data, alpha)
+                chi_alpha = V.dot(Sp.dot(Uh.dot(data)))
                 chi_alpha = np.reshape(chi_alpha, (Nx * Ny, N))
                 indicator = np.reshape(norm(chi_alpha, axis=1), X.shape)
                 
                 Imin = np.min(indicator)
                 Imax = np.max(indicator)
                 indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                Histogram[:, :, i] = indicator
                 Image += indicator**2
                     
             Image = np.sqrt(Image / Ns)
             
-        np.savez('imageLSE.npz', Image=Image, Histogram=Histogram,
-                 alpha=alpha, X=X, Y=Y)
+        np.savez('imageLSE.npz', Image=Image, alpha=alpha, X=X, Y=Y)
     
     #==============================================================================    
     else:
@@ -301,12 +302,10 @@ def solver(s, Uh, V, alpha, domain):
         Nz = len(z)
         X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
         
-        # Initialize the Histogram for storing images at each sampling point in time.
-        # Initialize the Image (source-integrated Histogram with respect to L2 norm)
-        Histogram = np.zeros((Nx, Ny, Nz, Ns))
+        # Initialize the Image
         Image = np.zeros(X.shape)
         
-        print('Localizing the source...')
+        print('Localizing the source function...')
         if Ns == 1:
             # Compute the Tikhonov-regularized solution to the Lippmann-Schwinger equation L * chi = u.
             # 'u' is recorded data
@@ -314,29 +313,26 @@ def solver(s, Uh, V, alpha, domain):
             # 'chi_alpha' is the regularized solution given 'alpha'
             data = np.reshape(recordedData, (N * Nr, 1))
             print('Solving system...')
-            chi_alpha = Tikhonov(Uh, s, V, data, alpha)
+            chi_alpha = V.dot(Sp.dot(Uh.dot(data)))
             chi_alpha = np.reshape(chi_alpha, (Nx * Ny * Nz, N))
             
             Image = np.reshape(norm(chi_alpha, axis=1), X.shape)                
             Imin = np.min(Image)
             Imax = np.max(Image)
             Image = (Image - Imin) / (Imax - Imin + eps)
-            Histogram[:, :, 0] = Image
                 
         else:                
-            for i in trange(Ns, desc='Summing over %s' %(slabel)):
+            for i in trange(Ns):
                 data = np.reshape(recordedData[:, :, i], (N * Nr, 1))
-                chi_alpha = Tikhonov(Uh, s, V, data, alpha)
+                chi_alpha = V.dot(Sp.dot(Uh.dot(data)))
                 chi_alpha = np.reshape(chi_alpha, (Nx * Ny * Nz, N))
                 indicator = np.reshape(norm(chi_alpha, axis=1), X.shape)
                 
                 Imin = np.min(indicator)
                 Imax = np.max(indicator)
                 indicator = (indicator - Imin) / (Imax - Imin + eps)  # normalization
-                Histogram[:, :, i] = indicator
                 Image += indicator**2
                     
             Image = np.sqrt(Image / Ns)
             
-        np.savez('imageLSE.npz', Image=Image, Histogram=Histogram,
-                 alpha=alpha, X=X, Y=Y, Z=Z)
+        np.savez('imageLSE.npz', Image=Image, alpha=alpha, X=X, Y=Y, Z=Z)

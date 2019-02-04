@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,13 @@ from pathlib import Path
 
 sys.path.append(os.getcwd())
 import pulseFun
+from vezda.plot_utils import FontColor
+
+def info():
+    commandName = FontColor.BOLD + 'vzgrid:' + FontColor.END
+    description = ' specify a sampling grid for imaging'
+    
+    return commandName + description
 
 def cli():
     parser = argparse.ArgumentParser()

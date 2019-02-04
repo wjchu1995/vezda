@@ -1,4 +1,4 @@
-# Copyright 2017-2018 Aaron C. Prunty
+# Copyright 2017-2019 Aaron C. Prunty
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 #==============================================================================
 
 import numpy as np
-from numpy.fft import rfft, irfft
 from scipy.sparse.linalg import LinearOperator
 from vezda.math_utils import nextPow2
 
@@ -60,46 +59,47 @@ def asConvolutionalOperator(data):
         N = nextPow2(2 * Nm)
         
         # Fourier transform the data over the time axis=1
-        U = rfft(data, n=N, axis=1)
+        U = np.fft.rfft(data, n=N, axis=1)
         
         def forwardOperator(x):        
             # definition of the forward convolutional operator
             
-            #reshape x into a matrix X
-            X = np.reshape(x, (2*Nm-1, Ns), order='F')
-            X = rfft(X, n=N, axis=0)
+            #reshape x into a matrix and FFT over time axis=0
+            x = np.reshape(x, (2*Nm-1, Ns), order='F')
+            x = np.fft.rfft(x, n=N, axis=0)
             
-            # initialize the output array Y for the range of Matrix
-            Y = np.zeros((2*Nm-1, Nr), dtype=data.dtype)
+            # initialize the output array y for the range of Matrix
+            y = np.zeros((2*Nm-1, Nr), dtype=data.dtype)
                 
             for i in range(Nr):
-                # Compute the matrix-vector product for Matrix * X
-                circularConvolution = irfft(U[i, :, :] * X, axis=0)
+                # Compute the matrix-vector product for Matrix * x
+                circularConvolution = np.fft.irfft(U[i, :, :] * x, axis=0)
                 circularConvolution = circularConvolution[:(2*Nm-1), :]
-                Y[:, i] = np.sum(circularConvolution, axis=1) # sum over sources
+                y[:, i] = np.sum(circularConvolution, axis=1) # sum over sources
                 
-            y = np.reshape(Y, ((2*Nm-1) * Nr, 1), order='F')
+            y = np.reshape(y, ((2*Nm-1) * Nr, 1), order='F')
         
             return y
     
-        def adjointOperator(x):               
+        def adjointOperator(y):               
             # definition of the adjoint convolutional operator
  
-            X = np.reshape(x, (2*Nm-1, Nr), order='F')
-            X = rfft(X, n=N, axis=0)
+            #reshape y into a matrix and FFT over time axis=0
+            y = np.reshape(y, (2*Nm-1, Nr), order='F')
+            y = np.fft.rfft(y, n=N, axis=0)
         
-            # initialize the output array Y for the range of Matrix.T
-            Y = np.zeros((2*Nm-1, Ns), dtype=data.dtype)
+            # initialize the output array x for the range of Matrix.T
+            x = np.zeros((2*Nm-1, Ns), dtype=data.dtype)
             
             for j in range(Ns):
-                # Compute the matrix-vector product for Matrix.T * X
-                circularConvolutionT = irfft(U[:, :, j].conj().T * X, axis=0)
+                # Compute the matrix-vector product for Matrix.T * y
+                circularConvolutionT = np.fft.irfft(U[:, :, j].conj().T * y, axis=0)
                 circularConvolutionT = circularConvolutionT[:(2*Nm-1), :]
-                Y[:, j] = np.sum(circularConvolutionT, axis=1) # sum over receivers
+                x[:, j] = np.sum(circularConvolutionT, axis=1) # sum over receivers
             
-            y = np.reshape(Y, ((2*Nm-1) * Ns, 1), order='F')
+            x = np.reshape(x, ((2*Nm-1) * Ns, 1), order='F')
         
-            return y
+            return x
         
         return LinearOperator(shape=((2*Nm-1) * Nr, (2*Nm-1) * Ns), matvec=forwardOperator,
                               rmatvec=adjointOperator, dtype=data.dtype)
@@ -109,43 +109,35 @@ def asConvolutionalOperator(data):
         
         def forwardOperator(x):        
             # definition of the forward convolutional operator
+
+            #reshape x into a matrix
+            x = np.reshape(x, (Nm, Ns), order='F')
             
-            #reshape x into a matrix X
-            X = np.reshape(x, (Nm, Ns), order='F')
-            
-            # initialize the output array Y for the range of Matrix
-            Y = np.zeros((Nm, Nr), dtype=data.dtype)
+            # initialize the output array y for the range of Matrix
+            y = np.zeros((Nm, Nr), dtype=data.dtype)
             
             for i in range(Nr):
-                # Compute the matrix-vector product for Matrix * X
-                U = data[i, :, :]
-                # Circular convolution is element-wise multiplication in frequency domain
-                circularConvolution = U * X
-                Y[:, i] = np.sum(circularConvolution, axis=1) # sum over sources
+                y[:, i] = np.sum(data[i, :, :] * x, axis=1) # sum over sources
             
-            y = np.reshape(Y, (Nm * Nr, 1), order='F')
+            y = np.reshape(y, (Nm * Nr, 1), order='F')
     
             return y
     
-        def adjointOperator(x):               
+        def adjointOperator(y):               
             # definition of the adjoint convolutional operator
+
+            #reshape y into a matrix
+            y = np.reshape(y, (Nm, Nr), order='F')
             
-            #reshape x into a matrix X
-            X = np.reshape(x, (Nm, Nr), order='F')
-            
-            # initialize the output array Y for the range of Matrix.T
-            Y = np.zeros((Nm, Ns), dtype=data.dtype)
+            # initialize the output array x for the range of Matrix.H
+            x = np.zeros((Nm, Ns), dtype=data.dtype)
         
             for j in range(Ns):
-                # Compute the matrix-vector product for Matrix.H * X
-                UH = data[:, :, j].conj().T
-                # Adjoint of circular convolution is element-wise multiplication in frequency domain
-                circularConvolutionH = UH * X
-                Y[:, j] = np.sum(circularConvolutionH, axis=1) # sum over receivers
+                x[:, j] = np.sum(data[:, :, j].conj().T * y, axis=1) # sum over receivers
         
-            y = np.reshape(Y, (Nm * Ns, 1), order='F')
+            x = np.reshape(x, (Nm * Ns, 1), order='F')
         
-            return y
+            return x
     
         return LinearOperator(shape=(Nm * Nr, Nm * Ns), matvec=forwardOperator,
                               rmatvec=adjointOperator, dtype=data.dtype)
