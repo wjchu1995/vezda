@@ -19,8 +19,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib.colors
 from skimage import measure
-from pathlib import Path
-from tqdm import trange
 
 #==============================================================================
 # Define color class for printing to terminal
@@ -279,13 +277,13 @@ def setFigure(num_axes=1, mode='light', ax1_dim=2, ax2_dim=2):
 
 #==============================================================================
 # Functions for plotting waveforms...
-def set_ylabel(N, coordinates, pltstart, flag, plotParams):
+def set_ylabel(N, coordinates, id_number, flag, plotParams):
     '''
     Sets the appropriate y-axis label according to the object being plotted
     
     N: number of points along y-axis (>= 1)
     coordinates: location of object being referenced on y-axis (only used if N == 1)
-    pltstart: the number of the object being plotted (e.g., 'Receiver 1')
+    id_number: the number of the object being plotted (e.g., 'Receiver 1')
     flag: string parameter describing the type of the object ('data', 'testfunc', 'left', or 'right')
     plotParams: a dictionary of the plot parameters for styling
     '''
@@ -308,19 +306,19 @@ def set_ylabel(N, coordinates, pltstart, flag, plotParams):
             # update ylabel to also show amplitude and coordinate information
             if coordinates.shape[1] == 2:
                 if au != '' and xu != '' and yu != '':
-                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s)]' %(au, ylabel, id_number,
                                                                                coordinates[0, 0], xu,
                                                                                coordinates[0, 1], yu)
                 elif au == '' and xu != '' and yu != '':
-                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
+                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s)]' %(ylabel, id_number,
                                                                           coordinates[0, 0], xu,
                                                                           coordinates[0, 1], yu)
                 elif au != '' and xu == '' and yu == '':
-                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f)]' %(au, ylabel, pltstart,
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f)]' %(au, ylabel, id_number,
                                                                          coordinates[0, 0],
                                                                          coordinates[0, 1])
                 elif au == '' and xu == '' and yu == '':
-                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f)]' %(ylabel, pltstart,
+                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f)]' %(ylabel, id_number,
                                                                     coordinates[0, 0],
                                                                     coordinates[0, 1])
                     
@@ -329,22 +327,22 @@ def set_ylabel(N, coordinates, pltstart, flag, plotParams):
                 zu = plotParams['zu']
             
                 if au != '' and xu != '' and yu != '' and zu != '':
-                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(au, ylabel, pltstart,
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(au, ylabel, id_number,
                                                                                          coordinates[0, 0], xu,
                                                                                          coordinates[0, 1], yu,
                                                                                          coordinates[0, 2], zu)
                 elif au == '' and xu != '' and yu != '' and zu != '':
-                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(ylabel, pltstart,
+                    ylabel = 'Amplitude [%s %s @ (%0.2f %s, %0.2f %s, %0.2f %s)]' %(ylabel, id_number,
                                                                                     coordinates[0, 0], xu,
                                                                                     coordinates[0, 1], yu,
                                                                                     coordinates[0, 2], zu)
                 elif au != '' and xu == '' and yu == '' and zu == '':
-                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(au, ylabel, pltstart,
+                    ylabel = 'Amplitude (%s) [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(au, ylabel, id_number,
                                                                                 coordinates[0, 0],
                                                                                 coordinates[0, 1],
                                                                                 coordinates[0, 2])
                 elif au == '' and xu == '' and yu == '' and zu == '':
-                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(ylabel, pltstart,
+                    ylabel = 'Amplitude [%s %s @ (%0.2f, %0.2f, %0.2f)]' %(ylabel, id_number,
                                                                            coordinates[0, 0],
                                                                            coordinates[0, 1],
                                                                            coordinates[0, 2])
@@ -352,21 +350,23 @@ def set_ylabel(N, coordinates, pltstart, flag, plotParams):
             
             # update ylabel to also show amplitude information
             if au != '':
-                ylabel = 'Amplitude (%s) [%s %s]' %(au, ylabel, pltstart)
+                ylabel = 'Amplitude (%s) [%s %s]' %(au, ylabel, id_number)
             else:
-                ylabel = 'Amplitude [%s %s]' %(ylabel, pltstart)
+                ylabel = 'Amplitude [%s %s]' %(ylabel, id_number)
     
     return ylabel
 
 
 
-def plotWiggles(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title, flag, plotParams):
+def plotWiggles(ax, X, xvals, interval, coordinates, title, flag, plotParams):
     ax.clear()
     N = X.shape[0]
     
+    id_number = interval[0]
+    ylabel = set_ylabel(N, coordinates, id_number, flag, plotParams)
+    ax.set_ylabel(ylabel, color=ax.labelcolor)
+    
     if N > 1:
-        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
-        ax.set_ylabel(ylabel, color=ax.labelcolor)
         
         if N <= 18:
             ax.set_yticks(interval)                
@@ -406,9 +406,6 @@ def plotWiggles(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title
                         
     else: # N == 1
         ax.yaxis.get_offset_text().set_x(-0.1)
-        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
-        ax.set_ylabel(ylabel, color=ax.labelcolor)
-                
         ax.plot(xvals, X[0, :], color=ax.linecolor, linewidth=ax.linewidth)
         ax.fill_between(xvals, 0, X[0, :], where=(X[0, :] > 0), color='m', alpha=ax.alpha)
         ax.fill_between(xvals, 0, X[0, :], where=(X[0, :] < 0), color='c', alpha=ax.alpha)
@@ -422,32 +419,12 @@ def plotWiggles(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title
     else:
         ax.set_xlabel('Time', color=ax.labelcolor)
     
-    # highlight regions of interest along the time axis
-    if flag == 'data' and (xvals[0] != xmin or xvals[-1] != xmax):
-        # For data plots, the full recording time is always plotted.
-        # In this case, t0 and tf denote the beginning and end of a
-        # time window. The time window of interest is highlighted
-        # while the rest of the time axis is shaded.
-        ax.axvspan(xvals[0], xmin, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
-        ax.axvspan(xmax, xvals[-1], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
-    
-        # set limits of time axis according to original recording time interval
-        ax.set_xlim([xvals[0], xvals[-1]])
-        
-    else:
-        # For all other plots, only the time window of interest is plotted.
-        # In this case, t0 and tf denote the beginning and end of the full
-        # recording time interval. The time window of interest is highlighted
-        # while the rest of the time axis is shaded.
-        ax.set_xlim([xmin, xmax])
-        
-        ax.axvspan(xmin, xvals[0], color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
-        ax.axvspan(xvals[-1], xmax, color=ax.shadecolor, alpha=ax.shadealpha, zorder=10)
+    ax.set_xlim([xvals[0], xvals[-1]])
         
     return ax
 
 
-def plotFreqVectors(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, title, flag, plotParams):
+def plotFreqVectors(ax, volume, xvals, interval, coordinates, title, flag, plotParams):
     ax.clear()
     
     ax.set_title(title, color=ax.titlecolor)
@@ -458,25 +435,23 @@ def plotFreqVectors(ax, X, xvals, xmin, xmax, pltstart, interval, coordinates, t
     else:
         ax.set_xlabel('Frequency', color=ax.labelcolor)
     
-    N = X.shape[0]
+    N = volume.shape[0]
+    id_number = interval[0]
+    ylabel = set_ylabel(N, coordinates, id_number, flag, plotParams)
+    ax.set_ylabel(ylabel, color=ax.labelcolor)
     if N > 1:
         # rescale all wiggle traces by largest displacement range
-        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
-        ax.set_ylabel(ylabel, color=ax.labelcolor)
-        
-        scaleFactor = np.max(np.abs(X))
+        scaleFactor = np.max(np.abs(volume))
         if scaleFactor != 0:
-            X /= scaleFactor
+            volume /= scaleFactor
         
-        return ax.pcolormesh(xvals, interval, X, vmin=-1, vmax=1, cmap=ax.customcmap)
+        return ax.pcolormesh(xvals, interval, volume, vmin=-1, vmax=1, cmap=ax.customcmap)
                         
     else: # N == 1
         ax.yaxis.get_offset_text().set_x(-0.1)
-        ylabel = set_ylabel(N, coordinates, pltstart, flag, plotParams)
-        ax.set_ylabel(ylabel, color=ax.labelcolor)
                 
         ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        return ax.stem(xvals, X[0, :], linefmt=ax.linecolor, markerfmt='mo')
+        return ax.stem(xvals, volume[0, :], linefmt=ax.linecolor, markerfmt='mo')
 
 
 #==============================================================================
@@ -668,7 +643,7 @@ def isosurface(volume, level, x1, x2, x3):
     return verts, faces
     
 
-def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
+def image_viewer(ax, volume, method, alpha, tol, plotParams, X, Y, Z=None, tau=None):
     ax.clear()
     ax.grid(False)
     
@@ -690,6 +665,13 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
     
     tu = plotParams['tu']
     
+    #if method == 'svd':
+    #    title = 'Method: SVD\n'
+    #elif method == 'lsmr':
+    #    title = 'Method: LSMR\n'
+    #elif method == 'cg':
+    #    title = 'Method: CG\n'
+    
     if Z is None:
         colormap = plt.get_cmap(plotParams['colormap'])
         im = ax.contourf(X, Y, volume, 100, cmap=colormap)
@@ -702,10 +684,13 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
                 cbar.set_label(r'$\frac{1}{\vert\vert\varphi\vert\vert}$',
                                labelpad=24, rotation=0, fontsize=18, color=ax.labelcolor)
         
-        if alpha != 0:
+        if alpha != 0.0:
             title = r'$\alpha = %0.1e$' %(alpha)
         else:
-            title = r'$\alpha = %s$' %(alpha)
+            title = r'$\alpha = %d$' %(alpha)
+            
+        if method != 'svd':
+            title += ', tol = %01.e' %(tol)
     
         if tau is not None:
             if tu != '':
@@ -733,9 +718,9 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
             ax.set_zlabel(zlabel, color=ax.labelcolor)
         
         if alpha != 0:
-            title = r'Isosurface @ %s [$\alpha = %0.1e$]' %(isolevel, alpha)
+            title += r'Isosurface @ %s [$\alpha = %0.1e$]' %(isolevel, alpha)
         else:
-            title = r'Isosurface @ %s [$\alpha = %s$]' %(isolevel, alpha)
+            title += r'Isosurface @ %s [$\alpha = %s$]' %(isolevel, alpha)
     
         if tau is not None:
             if tu != '':
@@ -748,135 +733,24 @@ def image_viewer(ax, volume, plotParams, alpha, X, Y, Z=None, tau=None):
     return ax
 
 
-def plotImage(Dict, plotParams, flag, spacetime=False, movie=False):
-    if 'Z' in Dict:
-        Z = Dict['Z']        
-        fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3) 
+def plotImage(Dict, X, Y, Z, tau, plotParams, flag, movie=False):
+    # Set up a two- or three-dimensional figure
+    if Z is None:      
+        fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=2) 
     else:
-        Z = None
-        fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=2)
+        fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3)
     
-    X = Dict['X']
-    Y = Dict['Y']
-    Image = Dict['Image']
+    Image = Dict['Image'].reshape(X.shape)
+    method = Dict['method']
     alpha = Dict['alpha']
+    tol = Dict['tol']
     
-    if 'tau' in Dict:
-        tau = Dict['tau']
-        if len(tau) == 1:
-            image_viewer(ax1, Image, plotParams, alpha, X, Y, Z, tau[0])
-        else:
-            image_viewer(ax1, Image, plotParams, alpha, X, Y, Z)
+    if Dict['domain'] == 'time':
+        image_viewer(ax, Image, method, alpha, tol, plotParams, X, Y, Z, tau)
     else:
-        tau = None
-        image_viewer(ax1, Image, plotParams, alpha, X, Y, Z)
-    
+        image_viewer(ax, Image, method, alpha, tol, plotParams, X, Y, Z)
         
-    if flag == 'NFE' and spacetime:
-        x = X[:, 0]
-        y = Y[0, :]
-        
-        if Z is None:
-            if tau is not None and len(tau) > 1:
-                # Create a second figure to plot 2D sections of Histogram
-                Histogram = Dict['Histogram']
-                fig2, ax2 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=2)
-                ax2.volume = Histogram
-                ax2.index = len(tau) // 2
-                image_viewer(ax2, Histogram[:, :, ax2.index], plotParams, alpha,
-                             X, Y, Z, tau[ax2.index])
-                ax2.set_aspect('equal')
-                    
-                if plotParams['invert_xaxis']:
-                    ax2.invert_xaxis()
-                    
-                if plotParams['invert_yaxis']:
-                    ax2.invert_yaxis()
-                    
-                if plotParams['invert_zaxis']:
-                    ax2.invert_zaxis()
-            
-                
-                # Create a third figure to plot isosurface of support of source function in space-time
-                SpaceTimeVolume = np.swapaxes(Histogram, 1, 2)
-                verts, faces = isosurface(SpaceTimeVolume, plotParams['isolevel'], x, tau, y)
-                
-                fig3, ax3 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3)
-                ax3.plot_trisurf(verts[:, 0], verts[:, 1], faces, verts[:, 2], color=ax3.surfacecolor)
-                ax3.view_init(elev=10, azim=340)
-                if alpha != 0:
-                    ax3.set_title(r'Isosurface @ %s [$\alpha = %0.1e$]' %(plotParams['isolevel'], alpha), color=ax3.titlecolor)
-                else:
-                    ax3.set_title(r'Isosurface @ %s [$\alpha = %s$]' %(plotParams['isolevel'], alpha), color=ax3.titlecolor)
-                
-                
-                xlabel = plotParams['xlabel']
-                xu = plotParams['xu']
-                if xu != '':
-                    ax3.set_xlabel(xlabel + ' (%s)' %(xu), color=ax3.labelcolor)
-                else:
-                    ax3.set_xlabel(xlabel, color=ax3.labelcolor)
-                
-                
-                ylabel = plotParams['ylabel']
-                yu = plotParams['yu']
-                if plotParams['yu'] != '':
-                    ax3.set_zlabel(ylabel + ' (%s)' %(yu), color=ax3.labelcolor)
-                else:
-                    ax3.set_zlabel(ylabel, color=ax3.labelcolor)
-                
-                
-                tu = plotParams['tu']
-                if plotParams['tu'] != '':
-                    ax3.set_ylabel(r'$\tau$ (%s)' %(tu), color=ax3.labelcolor)
-                else:
-                    ax3.set_ylabel(r'$\tau$', color=ax3.labelcolor)
-                
-                # y-axis is taken to be the 'vertical space' axis in 2D space.
-                # In the corresponding space-time figure, to maintain that the
-                # second space dimension is vertical, the y-axis is now the
-                # z-axis, and time (tau) is on the y-axis of the 3D figure.
-                if plotParams['invert_yaxis']:
-                    ax3.invert_zaxis()
-                    
-                if plotParams['invert_xaxis']:
-                    ax3.invert_xaxis()
-                
-                if movie:
-                    if not Path('./movie').exists():
-                        Path('./movie').mkdir(parents=True, exist_ok=True)
-                        for angle in trange(360, desc='Saving movie frames'):
-                            ax3.view_init(elev=10, azim=angle)
-                            fig3.savefig('./movie/movie%d' % angle + '.' + plotParams['pltformat'],
-                                         format=plotParams['pltformat'])
-                            
-                return fig1, ax1, fig2, ax2, fig3, ax3
-            
-            else:
-                
-                return fig1, ax1
-                        
-        else:
-        
-            if tau is not None and len(tau) > 1:
-                # Plot isosurface of support of source function in space-time
-                Histogram = Dict['Histogram']
-                fig2, ax2 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=3)
-                ax2.volume = Histogram
-                ax2.index = len(tau) // 2
-                ax2.set_aspect('equal')
-                image_viewer(ax2, Histogram[:, :, :, ax2.index], plotParams,
-                             alpha, X, Y, Z, tau[ax2.index])
-                
-                return fig1, ax1, fig2, ax2
-            
-            else:
-                
-                return fig1, ax1
-        
-    else:
-        
-        return fig1, ax1
+    return fig, ax
         
         
 #==============================================================================
@@ -978,8 +852,8 @@ def wave_title(index, sinterval, sourcePoints, flag, plotParams):
 
     
 
-def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
-                receiverPoints, sourcePoints, Ns, scatterer, show_map, flag, plotParams):
+def process_key_waves(event, time, rinterval, sinterval, receiverPoints,
+                      sourcePoints, Ns, scatterer, show_map, flag, plotParams):
     '''
     Determines how to draw the next plot based on keyboard events
     
@@ -987,9 +861,6 @@ def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
     
     Passed parameters:
     time: an array of time values over which the singular vectors are defined
-    t0: left endpoint of the time axis
-    tf: right endpoint of the time axis
-    pltstart: the number of the object being plotted (e.g., Receiver '1')
     rinterval: an interval or sampling of the receivers used
     sinterval: an interval or sampling of the sources used
     receiverPoints: coordinates of the receivers
@@ -1006,12 +877,12 @@ def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
         ax2 = fig.axes[1]
         
         if event.key == 'left' or event.key == 'down':
-            previous_wave(ax1, time, t0, tf, pltstart, rinterval, receiverPoints,
+            previous_wave(ax1, time, rinterval, receiverPoints,
                           sinterval, sourcePoints, Ns, flag, plotParams)
             previous_map(ax2, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams)
             
         elif event.key == 'right' or event.key == 'up':
-            next_wave(ax1, time, t0, tf, pltstart, rinterval, receiverPoints,
+            next_wave(ax1, time, rinterval, receiverPoints,
                       sinterval, sourcePoints, Ns, flag, plotParams)
             next_map(ax2, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams)
                       
@@ -1019,38 +890,36 @@ def process_key_waves(event, time, t0, tf, pltstart, rinterval, sinterval,
         fig = event.canvas.figure
         ax = fig.axes[0]
         if event.key == 'left' or event.key == 'down':
-            previous_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
+            previous_wave(ax, time, rinterval, receiverPoints,
                           sinterval, sourcePoints, Ns, flag, plotParams)
         elif event.key == 'right' or event.key == 'up':
-            next_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
+            next_wave(ax, time, rinterval, receiverPoints,
                       sinterval, sourcePoints, Ns, flag, plotParams)
     fig.canvas.draw()
          
     
     
-def next_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
+def next_wave(ax, time, rinterval, receiverPoints,
               sinterval, sourcePoints, Ns, flag, plotParams):
     volume = ax.volume
     ax.index = (ax.index + 1) % Ns
     title = wave_title(ax.index, sinterval, sourcePoints, flag, plotParams)
-    plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, rinterval, 
+    plotWiggles(ax, volume[:, :, ax.index], time, rinterval, 
                 receiverPoints, title, flag, plotParams)
     
-def previous_wave(ax, time, t0, tf, pltstart, rinterval, receiverPoints,
+def previous_wave(ax, time, rinterval, receiverPoints,
                   sinterval, sourcePoints, Ns, flag, plotParams):
     volume = ax.volume
     ax.index = (ax.index - 1) % Ns  # wrap around using %
     title = wave_title(ax.index, sinterval, sourcePoints, flag, plotParams)
-    plotWiggles(ax, volume[:, :, ax.index], time, t0, tf, pltstart, rinterval,
+    plotWiggles(ax, volume[:, :, ax.index], time, rinterval,
                 receiverPoints, title, flag, plotParams)
-
 
 
 def previous_map(ax, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams):
     ax.index = (ax.index - 1) % Ns  # wrap around using %
     plotMap(ax, ax.index, receiverPoints, sourcePoints, scatterer, flag, plotParams)
     
-
 
 def next_map(ax, receiverPoints, sourcePoints, Ns, scatterer, flag, plotParams):
     ax.index = (ax.index + 1) % Ns  # wrap around using %
@@ -1092,8 +961,9 @@ def vector_title(flag, n, cmplx_part=None):
           
 
 
-def process_key_vectors(event, xvals, xmin, xmax, pltrstart, pltsstart, 
-                        rinterval, sinterval, receiverPoints, sourcePoints, plotParams, dtype=None):
+def process_key_vectors(event, xvals, rinterval, sinterval,
+                        receiverPoints, sourcePoints, plotParams,
+                        dtype=None):
     '''
     Determines how to draw the next plot based on keyboard events
     
@@ -1116,55 +986,55 @@ def process_key_vectors(event, xvals, xmin, xmax, pltrstart, pltsstart,
     if event.key == 'left' or event.key == 'down':
         if dtype == 'cmplx_left':
             fig.suptitle('Left-Singular Vector', color=ax1.titlecolor, fontsize=16)
-            previous_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
-            previous_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
+            previous_vector(ax1, xvals, rinterval, receiverPoints, 'left', 'real', plotParams)
+            previous_vector(ax2, xvals, rinterval, receiverPoints, 'left', 'imag', plotParams)
         elif dtype == 'cmplx_right':
             fig.suptitle('Right-Singular Vector', color=ax1.titlecolor, fontsize=16)
-            previous_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
-            previous_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
+            previous_vector(ax1, xvals, sinterval, sourcePoints, 'right', 'real', plotParams)
+            previous_vector(ax2, xvals, sinterval, sourcePoints, 'right', 'imag', plotParams)
         else:
-            previous_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', None, plotParams)
-            previous_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', None, plotParams)
+            previous_vector(ax1, xvals, rinterval, receiverPoints, 'left', None, plotParams)
+            previous_vector(ax2, xvals, sinterval, sourcePoints, 'right', None, plotParams)
     
     elif event.key == 'right' or event.key == 'up':
         if dtype == 'cmplx_left':
             fig.suptitle('Left-Singular Vector', color=ax1.titlecolor, fontsize=16)
-            next_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'real', plotParams)
-            next_vector(ax2, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', 'imag', plotParams)
+            next_vector(ax1, xvals, rinterval, receiverPoints, 'left', 'real', plotParams)
+            next_vector(ax2, xvals, rinterval, receiverPoints, 'left', 'imag', plotParams)
         elif dtype == 'cmplx_right':
             fig.suptitle('Right-Singular Vector', color=ax1.titlecolor, fontsize=16)
-            next_vector(ax1, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'real', plotParams)
-            next_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', 'imag', plotParams)
+            next_vector(ax1, xvals, sinterval, sourcePoints, 'right', 'real', plotParams)
+            next_vector(ax2, xvals, sinterval, sourcePoints, 'right', 'imag', plotParams)
         else:
-            next_vector(ax1, xvals, xmin, xmax, pltrstart, rinterval, receiverPoints, 'left', None, plotParams)
-            next_vector(ax2, xvals, xmin, xmax, pltrstart, sinterval, sourcePoints, 'right', None, plotParams)
+            next_vector(ax1, xvals, rinterval, receiverPoints, 'left', None, plotParams)
+            next_vector(ax2, xvals, sinterval, sourcePoints, 'right', None, plotParams)
     
     fig.canvas.draw()
             
 
 
-def next_vector(ax, xvals, xmin, xmax, pltstart, interval, coordinates, flag, cmplx_part, plotParams):
+def next_vector(ax, xvals, interval, coordinates, flag, cmplx_part, plotParams):
     volume = ax.volume
     ax.index = (ax.index + 1) % volume.shape[2]
     title = vector_title(flag, ax.index + 1, cmplx_part)
     if cmplx_part is None:
-        plotWiggles(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+        plotWiggles(ax, volume[:, :, ax.index], xvals, interval, 
                     coordinates, title, flag, plotParams)
     else:
-        plotFreqVectors(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+        plotFreqVectors(ax, volume[:, :, ax.index], xvals, interval, 
                     coordinates, title, flag, plotParams)
 
 
 
-def previous_vector(ax, xvals, xmin, xmax, pltstart, interval, coordinates, flag, cmplx_part, plotParams):
+def previous_vector(ax, xvals, interval, coordinates, flag, cmplx_part, plotParams):
     volume = ax.volume
     ax.index = (ax.index - 1) % volume.shape[2]  # wrap around using %
     title = vector_title(flag, ax.index + 1, cmplx_part)
     if cmplx_part is None:
-        plotWiggles(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+        plotWiggles(ax, volume[:, :, ax.index], xvals, interval, 
                     coordinates, title, flag, plotParams)
     else:
-        plotFreqVectors(ax, volume[:, :, ax.index], xvals, xmin, xmax, pltstart, interval, 
+        plotFreqVectors(ax, volume[:, :, ax.index], xvals, interval, 
                     coordinates, title, flag, plotParams)
     
     

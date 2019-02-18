@@ -18,7 +18,7 @@ from scipy.sparse.linalg import LinearOperator
 from vezda.math_utils import nextPow2
 
 #==============================================================================
-def asConvolutionalOperator(data):
+def asConvolutionalOperator(kernel):
     '''
     This function takes a 3D data array as input and defines matrix-vector products 
     for both the forward and adjoint convolution operators. The convolutional operator
@@ -50,8 +50,8 @@ def asConvolutionalOperator(data):
     Output: the operator M such that y = Mx
     '''
     
-    Nr, Nm, Ns = data.shape
-    if np.issubdtype(data.dtype, np.floating):
+    Nr, Nm, Ns = kernel.shape
+    if np.issubdtype(kernel.dtype, np.floating):
         # input data are real (time domain)
     
         # get the next power of 2 greater than or equal to 2*Nm
@@ -59,17 +59,17 @@ def asConvolutionalOperator(data):
         N = nextPow2(2 * Nm)
         
         # Fourier transform the data over the time axis=1
-        U = np.fft.rfft(data, n=N, axis=1)
+        U = np.fft.rfft(kernel, n=N, axis=1)
         
         def forwardOperator(x):        
             # definition of the forward convolutional operator
             
             #reshape x into a matrix and FFT over time axis=0
-            x = np.reshape(x, (2*Nm-1, Ns), order='F')
+            x = x.reshape((2*Nm-1, Ns), order='F')
             x = np.fft.rfft(x, n=N, axis=0)
             
             # initialize the output array y for the range of Matrix
-            y = np.zeros((2*Nm-1, Nr), dtype=data.dtype)
+            y = np.zeros((2*Nm-1, Nr), dtype=kernel.dtype)
                 
             for i in range(Nr):
                 # Compute the matrix-vector product for Matrix * x
@@ -77,7 +77,7 @@ def asConvolutionalOperator(data):
                 circularConvolution = circularConvolution[:(2*Nm-1), :]
                 y[:, i] = np.sum(circularConvolution, axis=1) # sum over sources
                 
-            y = np.reshape(y, ((2*Nm-1) * Nr, 1), order='F')
+            y = y.reshape(((2*Nm-1) * Nr, 1), order='F')
         
             return y
     
@@ -85,11 +85,11 @@ def asConvolutionalOperator(data):
             # definition of the adjoint convolutional operator
  
             #reshape y into a matrix and FFT over time axis=0
-            y = np.reshape(y, (2*Nm-1, Nr), order='F')
+            y = y.reshape((2*Nm-1, Nr), order='F')
             y = np.fft.rfft(y, n=N, axis=0)
         
             # initialize the output array x for the range of Matrix.T
-            x = np.zeros((2*Nm-1, Ns), dtype=data.dtype)
+            x = np.zeros((2*Nm-1, Ns), dtype=kernel.dtype)
             
             for j in range(Ns):
                 # Compute the matrix-vector product for Matrix.T * y
@@ -97,12 +97,12 @@ def asConvolutionalOperator(data):
                 circularConvolutionT = circularConvolutionT[:(2*Nm-1), :]
                 x[:, j] = np.sum(circularConvolutionT, axis=1) # sum over receivers
             
-            x = np.reshape(x, ((2*Nm-1) * Ns, 1), order='F')
+            x = x.reshape(((2*Nm-1) * Ns, 1), order='F')
         
             return x
         
         return LinearOperator(shape=((2*Nm-1) * Nr, (2*Nm-1) * Ns), matvec=forwardOperator,
-                              rmatvec=adjointOperator, dtype=data.dtype)
+                              rmatvec=adjointOperator, dtype=kernel.dtype)
         
     else:
         # input data are complex (frequency domain)
@@ -111,15 +111,15 @@ def asConvolutionalOperator(data):
             # definition of the forward convolutional operator
 
             #reshape x into a matrix
-            x = np.reshape(x, (Nm, Ns), order='F')
+            x = x.reshape((Nm, Ns), order='F')
             
             # initialize the output array y for the range of Matrix
-            y = np.zeros((Nm, Nr), dtype=data.dtype)
+            y = np.zeros((Nm, Nr), dtype=kernel.dtype)
             
             for i in range(Nr):
-                y[:, i] = np.sum(data[i, :, :] * x, axis=1) # sum over sources
+                y[:, i] = np.sum(kernel[i, :, :] * x, axis=1) # sum over sources
             
-            y = np.reshape(y, (Nm * Nr, 1), order='F')
+            y = y.reshape((Nm * Nr, 1), order='F')
     
             return y
     
@@ -127,17 +127,17 @@ def asConvolutionalOperator(data):
             # definition of the adjoint convolutional operator
 
             #reshape y into a matrix
-            y = np.reshape(y, (Nm, Nr), order='F')
+            y = y.reshape((Nm, Nr), order='F')
             
             # initialize the output array x for the range of Matrix.H
-            x = np.zeros((Nm, Ns), dtype=data.dtype)
+            x = np.zeros((Nm, Ns), dtype=kernel.dtype)
         
             for j in range(Ns):
-                x[:, j] = np.sum(data[:, :, j].conj().T * y, axis=1) # sum over receivers
+                x[:, j] = np.sum(kernel[:, :, j].conj().T * y, axis=1) # sum over receivers
         
-            x = np.reshape(x, (Nm * Ns, 1), order='F')
+            x = x.reshape((Nm * Ns, 1), order='F')
         
             return x
     
         return LinearOperator(shape=(Nm * Nr, Nm * Ns), matvec=forwardOperator,
-                              rmatvec=adjointOperator, dtype=data.dtype)
+                              rmatvec=adjointOperator, dtype=kernel.dtype)

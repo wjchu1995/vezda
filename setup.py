@@ -13,7 +13,7 @@ if sys.version_info <= (2,7):
              ''')
 
 setup(name = 'vezda',
-      version = '0.6.0',
+      version = '0.6.1',
       description = 'A set of command-line tools for imaging with linear sampling methods',
       python_requires = '>=3',
       classifiers = [
@@ -51,7 +51,7 @@ setup(name = 'vezda',
                       'vzpicard = vezda.Picard:cli',
                       'vzsolve = vezda.Solve:cli',
                       'vzspectra = vezda.plotSpectra:cli',
-                      'vzsvd = vezda.SVD:cli',
+                      'vzsvd = vezda.plotSVD:cli',
                       'vzwiggles = vezda.plotWiggles:cli',
                       'vzwindow = vezda.setWindow:cli'
                       ]

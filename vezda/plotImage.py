@@ -18,15 +18,12 @@ import argparse
 import textwrap
 import pickle
 import numpy as np
+from pathlib import Path
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from vezda.plot_utils import setFigure
-from vezda.plot_utils import (default_params, remove_keymap_conflicts,
-                              process_key_images, plotImage, plotMap)
-from pathlib import Path
-from vezda.plot_utils import FontColor
+from vezda.plot_utils import (FontColor, default_params,
+                              setFigure, plotImage, plotMap)
 
 def info():
     commandName = FontColor.BOLD + 'vzimage:' + FontColor.END
@@ -40,11 +37,8 @@ def cli():
                         help='''Plot the image obtained by solving the near-field equation.''')
     parser.add_argument('--lse', action='store_true',
                         help='''Plot the image obtained by solving the Lippmann-Schwinger equation.''')
-    parser.add_argument('--spacetime', action='store_true',
-                        help='''Plot the support of the source function in space-time.''')
     parser.add_argument('--movie', action='store_true',
-                        help='''Save the space-time figure as a rotating frame (2D space)
-                        or as a time-lapse structure (3D space).''')
+                        help='Save a three-dimensional figure as a rotating frame.')
     parser.add_argument('--isolevel', type=float, default=None,
                         help='''Specify the contour level of the isosurface for
                         three-dimensional visualizations. Level must be between 0 and 1.''')
@@ -260,7 +254,6 @@ def cli():
         
     pickle.dump(plotParams, open('plotParams.pkl', 'wb'), pickle.HIGHEST_PROTOCOL)        
 
-    
     #==============================================================================
     # load the shape of the scatterer and source/receiver locations
     datadir = np.load('datadir.npz')
@@ -309,6 +302,38 @@ def cli():
             sourcePoints = sourcePoints[sinterval, :]
         
     #==============================================================================
+    # Load the user-specified sampling grid
+    if 'samplingGrid' in datadir:
+        samplingGrid = np.load(str(datadir['samplingGrid']))
+    else:
+        try:
+            samplingGrid = np.load('samplingGrid.npz')
+        except FileNotFoundError:
+            samplingGrid = None
+        
+    if samplingGrid is None:
+        sys.exit(textwrap.dedent(
+                '''
+                A sampling grid needs to be set up before it can be plotted.
+                Enter:
+                    
+                    vzgrid --help
+                
+                from the command-line for more information on how to set up a
+                sampling grid.
+                '''))
+    
+    x = samplingGrid['x']
+    y = samplingGrid['y']
+    tau = samplingGrid['tau']
+    if 'z' not in samplingGrid:
+        X, Y = np.meshgrid(x, y, indexing='ij')
+        Z = None
+    else:
+        z = samplingGrid['z']
+        X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+        
+    #==============================================================================
     if Path('imageNFE.npz').exists() and not Path('imageLSE.npz').exists():
         if args.lse:
             sys.exit(textwrap.dedent(
@@ -319,26 +344,8 @@ def cli():
             
         # plot the image obtained by solving the near-field equaiton (NFE)
         Dict = np.load('imageNFE.npz')
-        X = Dict['X']
-        Y = Dict['Y']
-        if 'Z' in Dict:
-            Z = Dict['Z']
-        else:
-            Z = None
-        if 'tau' in Dict:
-            tau = Dict['tau']
-            Ntau = len(tau)
-        else:
-            tau = None
-        alpha = Dict['alpha']
         flag = 'NFE'
-        fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
-        if otherImages:
-            if len(otherImages) == 2:
-                fig2, ax2 = otherImages
-            elif len(otherImages) == 4:
-                fig2, ax2, fig3, ax3 = otherImages
-        
+        fig, ax = plotImage(Dict, X, Y, Z, tau, plotParams, flag, args.movie)
         
     elif not Path('imageNFE.npz').exists() and Path('imageLSE.npz').exists():
         if args.nfe:
@@ -351,39 +358,21 @@ def cli():
         # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
         Dict = np.load('imageLSE.npz')
         flag = 'LSE'
-        fig1, ax1 = plotImage(Dict, plotParams, flag)
+        fig, ax = plotImage(Dict, X, Y, Z, tau, plotParams, flag)
         
     
     elif Path('imageNFE.npz').exists() and Path('imageLSE.npz').exists():
         if args.nfe and not args.lse:
             # plot the image obtained by solving the near-field equaiton (NFE)
             Dict = np.load('imageNFE.npz')
-            X = Dict['X']
-            Y = Dict['Y']
-            if 'Z' in Dict:
-                Z = Dict['Z']
-            else:
-                Z = None
-            if 'tau' in Dict:
-                tau = Dict['tau']
-                Ntau = len(tau)
-            else:
-                tau = None
-            alpha = Dict['alpha']
             flag = 'NFE'
-            fig1, ax1, *otherImages = plotImage(Dict, plotParams, flag, args.spacetime, args.movie)
-            if otherImages:
-                if len(otherImages) == 2:
-                    fig2, ax2 = otherImages
-                elif len(otherImages) == 4:
-                    fig2, ax2, fig3, ax3 = otherImages
-        
+            fig, ax = plotImage(Dict, X, Y, Z, tau, plotParams, flag, args.movie)        
                 
         elif not args.nfe and args.lse:
             # plot the image obtained by solving the Lippmann-Schwinger equation (LSE)
             Dict = np.load('imageLSE.npz')
             flag = 'LSE'
-            fig1, ax1 = plotImage(Dict, plotParams, flag)
+            fig, ax = plotImage(Dict, X, Y, Z, tau, plotParams, flag)
             
         
         elif args.nfe and args.lse:
@@ -394,18 +383,19 @@ def cli():
         
         
         else:
-            sys.exit(textwrap.dedent(
-                    '''
-                    Images obtained by solving both NFE and LSE are available. Enter:
+            flag = ''
+            print(textwrap.dedent(
+                  '''
+                  Images obtained by solving both NFE and LSE are available. Enter:
+                      
+                      vzimage --nfe
                         
-                        vzimage --nfe
-                        
-                    to view the image obtained by solving NFE or
+                  to view the image obtained by solving NFE or
                     
-                        vzimage --lse
+                      vzimage --lse
                         
-                    to view the image obtained by solving LSE.
-                    '''))
+                  to view the image obtained by solving LSE.
+                  '''))
             
     else:
         flag = ''
@@ -422,38 +412,16 @@ def cli():
                     near-field equation (NFE) or the Lippmann-Schwinger equation (LSE).
                     '''))
         
-        
-    
     try:
-        ax1
+        ax
     except NameError:
-        fig1, ax1 = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=receiverPoints.shape[1])
+        fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'], ax1_dim=receiverPoints.shape[1])
     
-    plotMap(ax1, None, receiverPoints, sourcePoints, scatterer, 'data', plotParams)
+    plotMap(ax, None, receiverPoints, sourcePoints, scatterer, 'data', plotParams)
         
     #==============================================================================
     
     pltformat = plotParams['pltformat']    
-    fig1.savefig('image' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
-                 facecolor=fig1.get_facecolor(), transparent=True)
-    
-    if flag == 'NFE' and args.spacetime:
-        remove_keymap_conflicts({'left', 'right', 'up', 'down', 'save'})
-        if Z is None:
-            try:
-                fig3.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
-                             facecolor=fig3.get_facecolor(), transparent=True)
-                fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
-                                                                                    alpha, X, Y, Z, Ntau, tau))
-            except NameError:
-                print('\nSpace-time reconstruction is not available for a single sampling point in time.\n')
-        else:
-            try:
-                fig2.savefig('spacetime' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
-                             facecolor=fig2.get_facecolor(), transparent=True)
-                fig2.canvas.mpl_connect('key_press_event', lambda event: process_key_images(event, plotParams,
-                                                                                    alpha, X, Y, Z, Ntau, tau))
-            except NameError:
-                print('\nSpace-time reconstruction is not available for a single sampling point in time.\n')
-    
+    fig.savefig('image' + flag + '.' + pltformat, format=pltformat, bbox_inches='tight',
+                 facecolor=fig.get_facecolor(), transparent=True)    
     plt.show()

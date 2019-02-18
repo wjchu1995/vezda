@@ -12,114 +12,130 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #==============================================================================
-
 import os
 import sys
 import numpy as np
-from pathlib import Path
-from vezda.sampling_utils import testFunc
-from vezda.LinearOperators import asNearFieldOperator
-import textwrap
+from vezda.data_utils import get_user_windows, fft_and_window
+from vezda.math_utils import nextPow2
+from vezda.sampling_utils import sampleSpace
+from vezda.plot_utils import setFigure
+from vezda.LinearOperators import asConvolutionalOperator
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
+import textwrap
 sys.path.append(os.getcwd())
 import pulseFun
 
+rinterval, tinterval, tstep, dt, sinterval = get_user_windows()
+
 datadir = np.load('datadir.npz')
 recordingTimes = np.load(str(datadir['recordingTimes']))
-receiverPoints = np.load(str(datadir['receivers']))
+recordingTimes = recordingTimes[tinterval]
 
-if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
-    TFtype = 'user'
-    TFarray = np.load(str(datadir['testFuncs']))
-    #time = recordingTimes
-    samplingPoints = np.load(str(datadir['samplingPoints']))
-    sourcePoints = samplingPoints[:, :-1]
-                    
-elif not 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
-    TFtype = 'vezda'
-    testFuncs = np.load('VZTestFuncs.npz')
-    TFarray = testFuncs['TFarray']
-    time = testFuncs['time'] 
-    samplingPoints = testFuncs['samplingPoints']
-    # Extract all but last column of sampling points,
-    # which corresponds to sampling points in time
-    #sourcePoints = samplingPoints[:, :-1]
-            
-elif 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
-    userResponded = False
-    print(textwrap.dedent(
-          '''
-          Two files are available containing simulated test functions.
-          
-          Enter '1' to view the user-provided test functions. (Default)
-          Enter '2' to view the test functions computed by Vezda.
-          Enter 'q/quit' to exit.
-          '''))
-    while userResponded == False:
-        answer = input('Action: ')
-        
-        if answer == '' or answer == '1':
-            TFtype = 'user'
-            TFarray = np.load(str(datadir['testFuncs']))
-            #time = recordingTimes
-            samplingPoints = np.load(str(datadir['samplingPoints']))
-            sourcePoints = samplingPoints[:, :-1]
-            userResponded = True
-            break
-        
-        elif answer == '2':
-            TFtype = 'vezda'
-            testFuncs = np.load('VZTestFuncs.npz')
-            TFarray = testFuncs['TFarray']
-            X = TFarray[:, :, :, 0]
-            time = testFuncs['time'] 
-            samplingPoints = testFuncs['samplingPoints']
-            # Extract all but last column of sampling points,
-            # which corresponds to sampling points in time
-            sourcePoints = samplingPoints[:, :-1]
-            userResponded = True
-        
-        elif answer == 'q' or answer == 'quit':
-            sys.exit('Exiting program.')
-        
-        else:
-            print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
-        
+Nt = len(recordingTimes)
+T = recordingTimes[-1] - recordingTimes[0]
+convolutionTimes = np.linspace(-T, T, 2 * Nt - 1)
+
+N = nextPow2(2 * Nt)
+freqs = np.fft.rfftfreq(N, tstep * dt)
+Nf = len(freqs)
+
+if 'sources' in datadir:
+    sourcePoints = np.load(str(datadir['sources']))
+    sourcePoints = sourcePoints[sinterval, :]
 else:
     sys.exit(textwrap.dedent(
             '''
-            Error: No test functions have been found to plot.
             '''))
     
-pulse = lambda t : pulseFun.pulse(t)
-velocity = pulseFun.velocity    # only used if medium == constant
+Ns = sourcePoints.shape[0]
 
-# Compute the incident waves Ui to each sampling point from the source surface
-Ui = np.zeros((Nx * Ny, Nt, Ns))
-for s in range(Ns):
-    Ui[:, :, s] = testFunc(pulse, samplingPoints[:, :2], sourcePoints[i, :],
-      recordingTimes, velocity)
-    
-
-
-# Construct the Herglotz wave function v_phi
-N = asNearFieldOperator(Ui)
-v_phi = N.matvec(phi)
-
-Gz = FundSol(pulse, recordingTimes - tau[it], velocity, samplingPoints[k, :2],
-             focusingPoints[k, :2])
-
-virtual_wave = v_phi + Gz
-
-# load test functions from sampling points to receivers
-TFarray
-
-for i in range(Nr):
-    # Compute the matrix-vector product for nearFieldMatrix * X2
-    U = incidentField[i, :, :]
-    # Circular convolution: pad time axis with zeros to length 2Nt - 1
-    circularConvolution = ifft(fft(U, n=N, axis=0) * fft(phi, n=N, axis=0), axis=0).real
-    convolutionMatrix = circularConvolution[:Nt, :]
-    Y1[:, i] = np.sum(convolutionMatrix, axis=1) # sum over all sources
+try:
+    samplingGrid = np.load('samplingGrid.npz')
+except FileNotFoundError:
+    samplingGrid = None
+        
+if samplingGrid is None:
+    sys.exit(textwrap.dedent(
+            '''
+            A sampling grid needs to be set up before test functions can
+            be computed.
+            Enter:
+                
+                vzgrid --help
+                
+            from the command-line for more information on how to set up a
+            sampling grid.
+            '''))
             
+x = samplingGrid['x']
+y = samplingGrid['y']
+Nx, Ny = len(x), len(y)
+tau = samplingGrid['tau']
+if 'z' in samplingGrid:
+    z = samplingGrid['z']
+    Nz = len(z)
+    Nsp = Nx * Ny * Nz
+    samplingPoints = np.vstack(np.meshgrid(x, y, z, indexing='ij')).reshape(3, Nsp).T
+else:
+    Nsp = Nx * Ny
+    samplingPoints = np.vstack(np.meshgrid(x, y, indexing='ij')).reshape(2, Nsp).T
     
+# Load the focusing solution phi
+phi = np.load('solutionNFE.npz')['X']
+
+image = np.load('imageNFE.npz')['Image']
+image = image.reshape(-1)
+
+index = np.argmax(image)
+focusingPoint = samplingPoints[index, :]
+phi = phi[:, index]
+
+velocity = 2
+pulse = lambda t : pulseFun.pulse(t)
+
+# Incident field
+U_i = sampleSpace(samplingPoints, convolutionTimes, sourcePoints, velocity, pulse)
+U_i = fft_and_window(U_i, tstep * dt, double_length=False)
+N = asConvolutionalOperator(U_i)
+
+# Focusing field
+V_phi = N.dot(phi)
+M = len(V_phi)
+Nm = int(M / Nsp)
+V_phi = V_phi.reshape((Nsp, Nm))
+V_phi = np.fft.irfft(V_phi, axis=1)
+
+def update_plot(i, data, scat):
+    scat.set_array(data[:, i])
+    return scat,
+
+color_data = V_phi
+x = samplingPoints[:, 0]
+y = samplingPoints[:, 1]
+
+fig, ax = setFigure(num_axes=1, mode='light', ax1_dim=2)
+ax.plot(focusingPoint[0], focusingPoint[1], 'r*', markersize=12)
+scat = ax.scatter(x, y, c=V_phi[:, 0], s=100, cmap='gray')
+
+ani = animation.FuncAnimation(fig, update_plot, frames=range(Nm),
+                              fargs=(color_data, scat))
+
+plt.show()
+
+#par = rsf.Par()
+#outputFile = rsf.Output()
+
+# Put axes in output
+#outputFile.put('n1', Ns)
+#outputFile.put('o1', 0)
+#outputFile.put('d1', 1)
+
+#outputFile.put('n2', Nt)
+#outputFile.put('o2', 0.0)
+#outputFile.put('d2', tstep * dt)
+
+#outputFile.write(phi[:, :, 0])
+#outputFile.close()
+

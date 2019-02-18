@@ -14,7 +14,7 @@
 #==============================================================================
 
 import numpy as np
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, tukey
 from vezda.math_utils import nextPow2
 
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -88,3 +88,18 @@ def compute_spectrum(data, dt, power=False):
     A = np.sum(amplitudes, axis=(0, 2)) / (Nr * Ns)
     
     return freqs, A
+
+
+def tukey_taper(X, dt, peakFreq):
+    Nt = X.shape[1]
+    # Np : Number of samples in the dominant period T = 1 / peakFreq
+    Np = int(round(1 / (dt * peakFreq)))
+    # alpha is set to taper over 6 of the dominant period of the
+    # pulse function (3 periods from each end of the signal)
+    alpha = 6 * Np / Nt
+    print('Tapering time signals with Tukey window: %d'
+          %(int(round(alpha * 100))) + '%')
+    TukeyWindow = tukey(Nt, alpha)
+    X *= TukeyWindow[None, :, None]
+    
+    return X

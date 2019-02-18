@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #==============================================================================
-
-import os
 import sys
 import argparse
 import textwrap
@@ -23,12 +21,9 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
+from vezda.data_utils import get_user_windows, load_data, load_test_funcs
 from vezda.plot_utils import (default_params, remove_keymap_conflicts, process_key_waves,
                               wave_title, plotWiggles, plotMap, setFigure)
-from vezda.sampling_utils import samplingIsCurrent, sampleSpace
-
-sys.path.append(os.getcwd())
-import pulseFun
 from vezda.plot_utils import FontColor
 
 def info():
@@ -123,48 +118,19 @@ def cli():
     # Load the relevant data to plot
     datadir = np.load('datadir.npz')
     receiverPoints = np.load(str(datadir['receivers']))
-    recordingTimes = np.load(str(datadir['recordingTimes']))
-    dt = recordingTimes[1] - recordingTimes[0]
+    time = np.load(str(datadir['recordingTimes']))
     
+    # Apply any user-specified windows
+    rinterval, tinterval, tstep, dt, sinterval = get_user_windows()
+    receiverPoints = receiverPoints[rinterval, :]
+    time = time[tinterval]
+    
+    # Load the scatterer boundary, if it exists
     if 'scatterer' in datadir:
         scatterer = np.load(str(datadir['scatterer']))
     else:
-        scatterer = None
+        scatterer = None    
     
-    if Path('window.npz').exists():
-        windowDict = np.load('window.npz')
-        
-        # Apply the receiver window
-        rstart = windowDict['rstart']
-        rstop = windowDict['rstop']
-        rstep = windowDict['rstep']
-        
-        # Apply the time window
-        tstart = windowDict['tstart']
-        tstop = windowDict['tstop']
-        tstep = windowDict['tstep']
-        
-        # Convert time window parameters to corresponding array indices
-        Tstart = int(round(tstart / dt))
-        Tstop = int(round(tstop / dt))
-    
-    else:
-        rstart = 0
-        rstop = receiverPoints.shape[0]
-        rstep = 1
-        
-        tstart = recordingTimes[0]
-        tstop = recordingTimes[-1]
-        
-        Tstart = 0
-        Tstop = len(recordingTimes)
-        tstep = 1
-    
-    rinterval = np.arange(rstart, rstop, rstep)
-    receiverPoints = receiverPoints[rinterval, :]
-    
-    tinterval = np.arange(Tstart, Tstop, tstep)
-        
     if all(v is True for v in [args.data, args.testfunc]):
         # User specified both data and testfuncs for plotting
         # Send error message and exit.
@@ -187,146 +153,48 @@ def cli():
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
         wiggleType = 'data'
-        if Path('noisyData.npz').exists():
-            userResponded = False
-            print(textwrap.dedent(
-                  '''
-                  Detected that band-limited noise has been added to the data array.
-                  Would you like to plot the noisy data? ([y]/n)
-                    
-                  Enter 'q/quit' exit the program.
-                  '''))
-            while userResponded == False:
-                answer = input('Action: ')
-                if answer == '' or answer == 'y' or answer == 'yes':
-                    print('Proceeding with plot of noisy data...')
-                    # read in the noisy data array
-                    X = np.load('noisyData.npz')['noisyData']
-                    userResponded = True
-                elif answer == 'n' or answer == 'no':
-                    print('Proceeding with plot of noise-free data...')
-                    # read in the recorded data array
-                    X  = np.load(str(datadir['recordedData']))
-                    userResponded = True
-                elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.\n')
-                else:
-                    print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
-            
-        else:
-            # read in the recorded data array
-            X  = np.load(str(datadir['recordedData']))
+        X = load_data(domain='time', verbose=True)
         
-        time = recordingTimes
         if 'sources' in datadir:
             sourcePoints = np.load(str(datadir['sources']))
+            sourcePoints = sourcePoints[sinterval, :]
         else:
             sourcePoints = None
-        X = X[rinterval, :, :]
     
     elif args.data:
         # load the 3D data array into variable 'X'
         # X[receiver, time, source]
         wiggleType = 'data'
-        if Path('noisyData.npz').exists():
-            userResponded = False
-            print(textwrap.dedent(
-                  '''
-                  Detected that band-limited noise has been added to the data array.
-                  Would you like to plot the noisy data? ([y]/n)
-                    
-                  Enter 'q/quit' exit the program.
-                  '''))
-            while userResponded == False:
-                answer = input('Action: ')
-                if answer == '' or answer == 'y' or answer == 'yes':
-                    print('Proceeding with plot of noisy data...')
-                    # read in the noisy data array
-                    X = np.load('noisyData.npz')['noisyData']
-                    userResponded = True
-                elif answer == 'n' or answer == 'no':
-                    print('Proceeding with plot of noise-free data...')
-                    # read in the recorded data array
-                    X  = np.load(str(datadir['recordedData']))
-                    userResponded = True
-                elif answer == 'q' or answer == 'quit':
-                    sys.exit('Exiting program.\n')
-                else:
-                    print('Invalid response. Please enter \'y/yes\', \'n\no\', or \'q/quit\'.')
-            
-        else:
-            # read in the recorded data array
-            X  = np.load(str(datadir['recordedData']))
+        X = load_data(domain='time', verbose=True)
         
-        time = recordingTimes
         if 'sources' in datadir:
             sourcePoints = np.load(str(datadir['sources']))
+            sourcePoints = sourcePoints[sinterval, :]
         else:
             sourcePoints = None
-        X = X[rinterval, :, :]
         
     elif args.testfunc:
         wiggleType = 'testfunc'
-        if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
-            X = np.load(str(datadir['testFuncs']))
-            T = recordingTimes[-1] - recordingTimes[0]
-            time = np.linspace(-T, T, 2 * len(recordingTimes) - 1)
-            sourcePoints = np.load(str(datadir['samplingPoints']))     
-            X = X[rinterval, :, :]
-            npad = ((0, 0), (len(recordingTimes) - 1, 0), (0, 0))
-            X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)
         
+        # Update time to convolution times
+        T = time[-1] - time[0]
+        time = np.linspace(-T, T, 2 * len(time) - 1)
+        
+        if 'testFuncs' not in datadir and not Path('VZTestFuncs.npz').exists():
+            X, sourcePoints = load_test_funcs(domain='time', medium='constant',
+                                              verbose=True, return_sampling_points=True)
+            
+        if 'testFuncs' in datadir and not Path('VZTestFuncs.npz').exists():
+            X, sourcePoints = load_test_funcs(domain='time', medium='variable',
+                                              verbose=True, return_sampling_points=True)
+            
+            # Pad time axis with zeros to length of convolution 2Nt-1
+            npad = ((0, 0), (X.shape[1] - 1, 0), (0, 0))
+            X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)
+            
         elif not 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
-            print('\nDetected that free-space test functions have already been computed...')
-            print('Checking consistency with current space-time sampling grid...')
-            TFDict = np.load('VZTestFuncs.npz')
-            
-            samplingGrid = np.load('samplingGrid.npz')
-            x = samplingGrid['x']
-            y = samplingGrid['y']
-            if 'z' in samplingGrid:
-                z = samplingGrid['z']
-            else:
-                z = None
-            tau = samplingGrid['tau']
-            
-            pulse = lambda t : pulseFun.pulse(t)
-            velocity = pulseFun.velocity
-            peakFreq = pulseFun.peakFreq
-            peakTime = pulseFun.peakTime
-            
-            # set up the convolution times based on the length of the recording time interval
-            time = recordingTimes[tinterval]
-            T = time[-1] - time[0]
-            time = np.linspace(-T, T, 2 * len(time) - 1)
-            if samplingIsCurrent(TFDict, receiverPoints, time, velocity, tau, x, y, z, peakFreq, peakTime):
-                print('Moving forward to plot test functions...')
-                X = TFDict['TFarray']
-                sourcePoints = TFDict['samplingPoints']
-                
-            else:
-                if tau[0] != 0:
-                    tu = plotParams['tu']
-                    if tu != '':
-                        print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
-                    else:
-                        print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
-                    X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
-                                                  x, y, z, pulse)
-                else:
-                    print('Recomputing test functions...')
-                    X, sourcePoints = sampleSpace(receiverPoints, time, velocity,
-                                                  x, y, z, pulse)
-                    
-                if z is None:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                             x=x, y=y, tau=tau, samplingPoints=sourcePoints)
-                else:
-                    np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                             peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                             x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
-                    
+            X, sourcePoints = load_test_funcs(domain='time', medium='constant',
+                                              verbose=True, return_sampling_points=True)
                     
         elif 'testFuncs' in datadir and Path('VZTestFuncs.npz').exists():
             userResponded = False
@@ -342,146 +210,35 @@ def cli():
                 answer = input('Action: ')
                 
                 if answer == '' or answer == '1':
-                    X = np.load(str(datadir['testFuncs']))
-                    T = recordingTimes[-1] - recordingTimes[0]
-                    time = np.linspace(-T, T, 2 * len(recordingTimes) - 1)
-                    sourcePoints = np.load(str(datadir['samplingPoints']))     
-                    X = X[rinterval, :, :]
-                    npad = ((0, 0), (len(recordingTimes) - 1, 0), (0, 0))
-                    X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)                   
+                    X, sourcePoints = load_test_funcs(domain='time', medium='variable',
+                                                      verbose=True, return_sampling_points=True)
+            
+                    # Pad time axis with zeros to length of convolution 2Nt-1
+                    npad = ((0, 0), (X.shape[1] - 1, 0), (0, 0))
+                    X = np.pad(X, pad_width=npad, mode='constant', constant_values=0)
+                    
                     userResponded = True
                     break
                 
                 elif answer == '2':
-                    print('\nDetected that free-space test functions have already been computed...')
-                    print('Checking consistency with current spatial sampling grid...')
-                    TFDict = np.load('VZTestFuncs.npz')
-            
-                    samplingGrid = np.load('samplingGrid.npz')
-                    x = samplingGrid['x']
-                    y = samplingGrid['y']
-                    if 'z' in samplingGrid:
-                        z = samplingGrid['z']
-                    else:
-                        z = None
-                    tau = samplingGrid['tau']
-            
-                    pulse = lambda t : pulseFun.pulse(t)
-                    velocity = pulseFun.velocity
-                    peakFreq = pulseFun.peakFreq
-                    peakTime = pulseFun.peakTime
-                    
-                    # set up the convolution times based on the length of the recording time interval
-                    time = recordingTimes[tinterval]
-                    T = time[-1] - time[0]
-                    time = np.linspace(-T, T, 2 * len(time) - 1)
-                    if samplingIsCurrent(TFDict, receiverPoints, time, velocity, tau, x, y, z, peakFreq, peakTime):
-                        print('Moving forward to plot test functions...')
-                        X = TFDict['TFarray']
-                        sourcePoints = TFDict['samplingPoints']
-                    
-                    else:                
-                        if tau[0] != 0:
-                            tu = plotParams['tu']
-                            if tu != '':
-                                print('Recomputing test functions for focusing time %0.2f %s...' %(tau[0], tu))
-                            else:
-                                print('Recomputing test functions for focusing time %0.2f...' %(tau[0]))
-                            X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
-                                                          x, y, z, pulse)
-                        else:
-                            print('Recomputing test functions...')
-                            X, sourcePoints = sampleSpace(receiverPoints, time, velocity,
-                                                          x, y, z, pulse)
-                    
-                        if z is None:
-                            np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                                     x=x, y=y, tau=tau, samplingPoints=sourcePoints)
-                        else:
-                            np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                                     peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                                     x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
+                    X, sourcePoints = load_test_funcs(domain='time', medium='constant',
+                                                      verbose=True, return_sampling_points=True)
                     
                     userResponded = True
+                    break
                 
                 elif answer == 'q' or answer == 'quit':
                     sys.exit('Exiting program.')
                 
                 else:
                     print('Invalid response. Please enter \'1\', \'2\', or \'q/quit\'.')
-        
-        else:                
-            print('\nComputing free-space test functions for the current space-time sampling grid...')
-            # set up the convolution times based on the length of the recording time interval
-            time = recordingTimes[tinterval]
-            T = time[-1] - time[0]
-            time = np.linspace(-T, T, 2 * len(time) - 1)
             
-            samplingGrid = np.load('samplingGrid.npz')
-            x = samplingGrid['x']
-            y = samplingGrid['y']
-            if 'z' in samplingGrid:
-                z = samplingGrid['z']
-            else:
-                z = None
-            tau = samplingGrid['tau']
-            
-            pulse = lambda t : pulseFun.pulse(t)
-            velocity = pulseFun.velocity
-            peakFreq = pulseFun.peakFreq
-            peakTime = pulseFun.peakTime
-            
-            if tau[0] != 0:
-                tu = plotParams['tu']
-                if tu != '':
-                    print('Computing test functions for focusing time %0.2f %s...' %(tau[0], tu))
-                else:
-                    print('Computing test functions for focusing time %0.2f...' %(tau[0]))
-                X, sourcePoints = sampleSpace(receiverPoints, time - tau[0], velocity,
-                                              x, y, z, pulse)
-            else:
-                X, sourcePoints = sampleSpace(receiverPoints, time, velocity,
-                                              x, y, z, pulse)
-                    
-            if z is None:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                         x=x, y=y, tau=tau, samplingPoints=sourcePoints)
-            else:
-                np.savez('VZTestFuncs.npz', TFarray=X, time=time, receivers=receiverPoints,
-                         peakFreq=peakFreq, peakTime=peakTime, velocity=velocity,
-                         x=x, y=y, z=z, tau=tau, samplingPoints=sourcePoints)
     
-    #==============================================================================    
-    if Path('window.npz').exists() and wiggleType == 'data':   
-        t0 = tstart
-        tf = tstop
-         
-        # Apply the source window
-        sstart = windowDict['sstart']
-        sstop = windowDict['sstop']
-        sstep = windowDict['sstep']
-            
-    else:
-        t0 = time[0]
-        tf = time[-1]
-        
-        sstart = 0
-        sstop = X.shape[2]
-        sstep = 1
-            
-    sinterval = np.arange(sstart, sstop, sstep)
-        
-    X = X[:, :, sinterval]
-    if sourcePoints is not None:
-        sourcePoints = sourcePoints[sinterval, :]
-    
+    #==============================================================================        
     # increment source/recording interval and receiver interval to be consistent
     # with one-based indexing (i.e., count from one instead of zero)
     sinterval += 1
     rinterval += 1
-    rstart += 1
     
     Ns = X.shape[2]
     
@@ -493,14 +250,14 @@ def cli():
         ax1.volume = X
         ax1.index = Ns // 2
         title = wave_title(ax1.index, sinterval, sourcePoints, wiggleType, plotParams)
-        plotWiggles(ax1, X[:, :, ax1.index], time, t0, tf, rstart, rinterval, receiverPoints, title, wiggleType, plotParams)
+        plotWiggles(ax1, X[:, :, ax1.index], time, rinterval, receiverPoints, title, wiggleType, plotParams)
         
         ax2.index = ax1.index
         plotMap(ax2, ax2.index, receiverPoints, sourcePoints, scatterer, wiggleType, plotParams)
         plt.tight_layout()
-        fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, t0, tf, rstart, rinterval,
-                                                                                  sinterval, receiverPoints, sourcePoints,
-                                                                                  Ns, scatterer, args.map, wiggleType, plotParams))
+        fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, rinterval, sinterval,
+                                                                                  receiverPoints, sourcePoints, Ns, scatterer,
+                                                                                  args.map, wiggleType, plotParams))
     
     else:
         fig, ax = setFigure(num_axes=1, mode=plotParams['view_mode'])
@@ -508,10 +265,10 @@ def cli():
         ax.volume = X
         ax.index = Ns // 2
         title = wave_title(ax.index, sinterval, sourcePoints, wiggleType, plotParams)
-        plotWiggles(ax, X[:, :, ax.index], time, t0, tf, rstart, rinterval, receiverPoints, title, wiggleType, plotParams)
+        plotWiggles(ax, X[:, :, ax.index], time, rinterval, receiverPoints, title, wiggleType, plotParams)
         plt.tight_layout()
-        fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, t0, tf, rstart, rinterval,
-                                                                                  sinterval, receiverPoints, sourcePoints,
-                                                                                  Ns, scatterer, args.map, wiggleType, plotParams))
+        fig.canvas.mpl_connect('key_press_event', lambda event: process_key_waves(event, time, rinterval, sinterval,
+                                                                                  receiverPoints, sourcePoints, Ns, scatterer,
+                                                                                  args.map, wiggleType, plotParams))
     
     plt.show()
