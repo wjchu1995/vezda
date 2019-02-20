@@ -665,12 +665,14 @@ def image_viewer(ax, volume, method, alpha, tol, plotParams, X, Y, Z=None, tau=N
     
     tu = plotParams['tu']
     
-    #if method == 'svd':
-    #    title = 'Method: SVD\n'
-    #elif method == 'lsmr':
+    #if method == 'lsqr':
+    #    title = 'Method: LSQR\n'
+    #if method == 'lsmr':
     #    title = 'Method: LSMR\n'
     #elif method == 'cg':
     #    title = 'Method: CG\n'
+    #if method == 'svd':
+    #    title = 'Method: SVD\n'
     
     if Z is None:
         colormap = plt.get_cmap(plotParams['colormap'])

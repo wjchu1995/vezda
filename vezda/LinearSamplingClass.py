@@ -27,6 +27,74 @@ class LinearSystem(object):
         self.B = rhs_vectors
         
         
+    def solve_lsqr(self, alpha=0.0, tol=1.0e-4):
+        M, N = self.A.shape
+        K = self.B.shape[2]
+        
+        # initialize solution matrix X
+        X = np.zeros((N, K), dtype=self.A.dtype)
+        
+        # initialize array for convergence data
+        # R[:, 0] = index for stop reason
+        # R[:, 1] = number of iterations performed
+        # R[:, 2] = l2 norm of residual vector
+        #R = np.zeros((K, 3))
+        
+        # Opportunity to parallelize here...
+        startTime = time.time()
+        for i in trange(K):
+            b = self.B[:, :, i].reshape(M)
+            X[:, i] = sp.linalg.lsqr(self.A, b, damp=alpha, atol=tol)[0]
+            #X[:, i], R[i, :] = results[0], results[-3:]
+        endTime = time.time()
+        print('Elapsed time:', humanReadable(endTime - startTime))
+        
+        return X
+    
+    def solve_lsmr(self, alpha=0.0, tol=1.0e-4):
+        M, N = self.A.shape
+        K = self.B.shape[2]
+        
+        # initialize solution matrix X
+        X = np.zeros((N, K), dtype=self.A.dtype)
+        
+        # initialize array for convergence data
+        # R[:, 0] = index for stop reason
+        # R[:, 1] = number of iterations performed
+        # R[:, 2] = l2 norm of residual vector
+        #R = np.zeros((K, 3))
+        
+        # Opportunity to parallelize here...
+        startTime = time.time()
+        for i in trange(K):
+            b = self.B[:, :, i].reshape(M)
+            X[:, i] = sp.linalg.lsmr(self.A, b, damp=alpha, atol=tol)[0]
+            #X[:, i], R[i, :] = results[0], results[-3:]
+        endTime = time.time()
+        print('Elapsed time:', humanReadable(endTime - startTime))
+        
+        return X
+        
+    def solve_cg(self, tol=1.0e-4):
+        M, N = self.A.shape
+        K = self.B.shape[2]
+        
+        # initialize solution matrix X
+        X = np.zeros((N, K), dtype=self.A.dtype)
+        
+        # Construct SPD matrix AhA
+        Ah = self.A.adjoint()
+        AhA = Ah.dot(self.A)
+        # Opportunity to parallelize here...
+        startTime = time.time()
+        for i in trange(K):
+            b = self.B[:, :, i].reshape(M)
+            X[:, i] = sp.linalg.cg(AhA, Ah.dot(b), tol=tol)[0]
+        endTime = time.time()
+        print('Elapsed time:', humanReadable(endTime - startTime))
+        
+        return X
+    
     def solve_svd(self, U, s, Vh, alpha=0.0):
         #======================================================================
         # Construct the pseudoinverse of A : A+ = V Sp Uh
@@ -56,52 +124,6 @@ class LinearSystem(object):
             b = self.B[:, :, i].reshape(M)
             #print('b.shape =', b.shape)
             X[:, i] = V.dot(Sp.dot(Uh.dot(b)))
-        endTime = time.time()
-        print('Elapsed time:', humanReadable(endTime - startTime))
-        
-        return X
-        
-        
-    def solve_lsmr(self, alpha=0.0, tol=1.0e-4):
-        M, N = self.A.shape
-        K = self.B.shape[2]
-        
-        # initialize solution matrix X
-        X = np.zeros((N, K), dtype=self.A.dtype)
-        
-        # initialize array for convergence data
-        # R[:, 0] = index for stop reason
-        # R[:, 1] = number of iterations performed
-        # R[:, 2] = l2 norm of residual vector
-        #R = np.zeros((K, 3))
-        
-        # Opportunity to parallelize here...
-        startTime = time.time()
-        for i in trange(K):
-            b = self.B[:, :, i].reshape(M)
-            X[:, i] = sp.linalg.lsmr(self.A, b, damp=alpha, atol=tol)[0]
-            #X[:, i], R[i, :] = results[0], results[-3:]
-        endTime = time.time()
-        print('Elapsed time:', humanReadable(endTime - startTime))
-        
-        return X
-    
-        
-    def solve_cg(self, tol=1.0e-4):
-        M, N = self.A.shape
-        K = self.B.shape[2]
-        
-        # initialize solution matrix X
-        X = np.zeros((N, K), dtype=self.A.dtype)
-        
-        # Construct SPD matrix AhA
-        Ah = self.A.adjoint()
-        AhA = Ah.dot(self.A)
-        # Opportunity to parallelize here...
-        startTime = time.time()
-        for i in trange(K):
-            b = self.B[:, :, i].reshape(M)
-            X[:, i] = sp.linalg.cg(AhA, Ah.dot(b), tol=tol)[0]
         endTime = time.time()
         print('Elapsed time:', humanReadable(endTime - startTime))
         
@@ -136,7 +158,19 @@ class LinearSamplingProblem(LinearSystem):
         k : number of singular values/vectors to compute
         '''
         #======================================================================
-        if method == 'svd':
+        if method == 'lsqr':
+            print('Localizing the source function...')
+            return super().solve_lsqr(alpha, tol)
+        
+        elif method == 'lsmr':
+            print('Localizing the source function...')
+            return super().solve_lsmr(alpha, tol)
+        
+        elif method == 'cg':
+            print('Localizing the source function...')
+            return super().solve_cg(tol)
+        
+        elif method == 'svd':
             # Load or recompute the SVD of A as needed
         
             if self.operatorName == 'nfo':
@@ -155,14 +189,6 @@ class LinearSamplingProblem(LinearSystem):
             
             print('Localizing the source function...')
             return super().solve_svd(U, s, Vh, alpha)
-                
-        elif method == 'lsmr':
-            print('Localizing the source function...')
-            return super().solve_lsmr(alpha, tol)
-        
-        elif method == 'cg':
-            print('Localizing the source function...')
-            return super().solve_cg(tol)
             
     
     def construct_image(self, solutions):

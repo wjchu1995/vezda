@@ -37,9 +37,9 @@ def cli():
                         help='''Specify whether to compute the singular-value decomposition in
                         the time domain or frequency domain. Default is set to frequency domain
                         for faster, more accurate performance.''')
-    parser.add_argument('--method', '-m', type=str, default='lsmr', choices=['lsmr', 'cg', 'svd'],
+    parser.add_argument('--method', '-m', type=str, default='lsqr', choices=['lsqr', 'lsmr', 'cg', 'svd'],
                         help='''Specify the method for solving the linear sampling problem:
-                        iterative least-squares (lsmr), conjugate gradient (cg), or 
+                        iterative least-squares (lsqr/lsmr), conjugate gradient (cg), or 
                         singular-value decomposition (svd).''')
     parser.add_argument('--numVals', '-k', type=int,
                         help='''Specify the number of singular values/vectors to compute.
